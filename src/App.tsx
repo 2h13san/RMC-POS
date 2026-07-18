@@ -7,12 +7,12 @@ import React, { useState, useEffect } from 'react';
 import { 
   LogOut, UserCheck, Shield, ShoppingBag, BarChart3, Database, 
   AlertTriangle, CheckCircle, Lock, PlusCircle, Sparkles, Eye, EyeOff,
-  History, Settings, Store, Receipt, X, User as UserIcon, Moon, Sun
+  History, Settings, Store, Receipt, X, User as UserIcon, Moon, Sun, Users, Truck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // Types & Initial seeds
-import { Product, Category, Transaction, User, SyncConfig, StoreSettings, INITIAL_CATEGORIES, INITIAL_PRODUCTS, INITIAL_TRANSACTIONS } from './types';
+import { Product, Category, Transaction, User, SyncConfig, StoreSettings, INITIAL_CATEGORIES, INITIAL_PRODUCTS, INITIAL_TRANSACTIONS, Customer, INITIAL_CUSTOMERS, Supplier, Purchase, PurchaseReturn, INITIAL_SUPPLIERS } from './types';
 
 // Services
 import { syncToGoogleSheets, pullFromGoogleSheets } from './utils/syncService';
@@ -25,6 +25,9 @@ import ThermalReceipt from './components/ThermalReceipt';
 import AppsScriptGuide from './components/AppsScriptGuide';
 import TransactionHistory from './components/TransactionHistory';
 import SettingsTab from './components/SettingsTab';
+import CustomerDisplay from './components/CustomerDisplay';
+import CustomerManager from './components/CustomerManager';
+import PurchaseManager from './components/PurchaseManager';
 
 export default function App() {
   // --- core PERSISTENCE states ---
@@ -38,6 +41,10 @@ export default function App() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [purchaseReturns, setPurchaseReturns] = useState<PurchaseReturn[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [syncConfig, setSyncConfig] = useState<SyncConfig>(() => {
     const saved = localStorage.getItem('kp_sync_config');
@@ -76,7 +83,7 @@ export default function App() {
   });
 
   // --- UI states ---
-  const [activeTab, setActiveTab] = useState<'cashier' | 'dashboard' | 'inventory' | 'history' | 'settings'>('cashier');
+  const [activeTab, setActiveTab] = useState<'cashier' | 'dashboard' | 'inventory' | 'history' | 'settings' | 'customers' | 'pembelian'>('cashier');
   const [selectedTxForReceipt, setSelectedTxForReceipt] = useState<Transaction | null>(null);
   const [isSyncGuideOpen, setIsSyncGuideOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -182,6 +189,78 @@ export default function App() {
       }
     } catch (e) {
       console.error('Failed to sync users to server:', e);
+    }
+  };
+
+  const saveCustomersToServer = async (updated: Customer[]) => {
+    try {
+      const res = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      });
+      if (res.ok) {
+        const resData = await res.json();
+        if (resData.lastUpdated) {
+          localStorage.setItem('kp_last_updated', resData.lastUpdated.toString());
+        }
+      }
+    } catch (e) {
+      console.error('Failed to sync customers to server:', e);
+    }
+  };
+
+  const saveSuppliersToServer = async (updated: Supplier[]) => {
+    try {
+      const res = await fetch('/api/suppliers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      });
+      if (res.ok) {
+        const resData = await res.json();
+        if (resData.lastUpdated) {
+          localStorage.setItem('kp_last_updated', resData.lastUpdated.toString());
+        }
+      }
+    } catch (e) {
+      console.error('Failed to sync suppliers to server:', e);
+    }
+  };
+
+  const savePurchasesToServer = async (updated: Purchase[]) => {
+    try {
+      const res = await fetch('/api/purchases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      });
+      if (res.ok) {
+        const resData = await res.json();
+        if (resData.lastUpdated) {
+          localStorage.setItem('kp_last_updated', resData.lastUpdated.toString());
+        }
+      }
+    } catch (e) {
+      console.error('Failed to sync purchases to server:', e);
+    }
+  };
+
+  const savePurchaseReturnsToServer = async (updated: PurchaseReturn[]) => {
+    try {
+      const res = await fetch('/api/purchase-returns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      });
+      if (res.ok) {
+        const resData = await res.json();
+        if (resData.lastUpdated) {
+          localStorage.setItem('kp_last_updated', resData.lastUpdated.toString());
+        }
+      }
+    } catch (e) {
+      console.error('Failed to sync purchase returns to server:', e);
     }
   };
 
@@ -305,6 +384,38 @@ export default function App() {
               }
             }
 
+             const localCustomersStr = localStorage.getItem('kp_customers');
+            if (localCustomersStr) {
+              const parsedCusts = JSON.parse(localCustomersStr);
+              if (parsedCusts && parsedCusts.length > 0) {
+                await saveCustomersToServer(parsedCusts);
+              }
+            }
+
+            const localSuppliersStr = localStorage.getItem('kp_suppliers');
+            if (localSuppliersStr) {
+              const parsedSups = JSON.parse(localSuppliersStr);
+              if (parsedSups && parsedSups.length > 0) {
+                await saveSuppliersToServer(parsedSups);
+              }
+            }
+
+            const localPurchasesStr = localStorage.getItem('kp_purchases');
+            if (localPurchasesStr) {
+              const parsedPurchases = JSON.parse(localPurchasesStr);
+              if (parsedPurchases && parsedPurchases.length > 0) {
+                await savePurchasesToServer(parsedPurchases);
+              }
+            }
+
+            const localReturnsStr = localStorage.getItem('kp_purchase_returns');
+            if (localReturnsStr) {
+              const parsedReturns = JSON.parse(localReturnsStr);
+              if (parsedReturns && parsedReturns.length > 0) {
+                await savePurchaseReturnsToServer(parsedReturns);
+              }
+            }
+
             // Fetch newly synchronized data from server to align React states
             const healRes = await fetch(`/api/data?t=${Date.now()}`);
             if (healRes.ok) {
@@ -314,6 +425,10 @@ export default function App() {
                 setCategories(healedData.categories || []);
                 setTransactions(healedData.transactions || []);
                 setUsers(healedData.users || []);
+                setCustomers(healedData.customers || []);
+                setSuppliers(healedData.suppliers || []);
+                setPurchases(healedData.purchases || []);
+                setPurchaseReturns(healedData.purchaseReturns || []);
                 setStoreSettings(healedData.storeSettings);
                 setSyncConfig(healedData.syncConfig);
                 if (healedData.lastUpdated) {
@@ -347,6 +462,22 @@ export default function App() {
         if (isInitial || JSON.stringify(data.users) !== localStorage.getItem('kp_users')) {
           setUsers(data.users);
           localStorage.setItem('kp_users', JSON.stringify(data.users));
+        }
+        if (isInitial || JSON.stringify(data.customers || []) !== localStorage.getItem('kp_customers')) {
+          setCustomers(data.customers || []);
+          localStorage.setItem('kp_customers', JSON.stringify(data.customers || []));
+        }
+        if (isInitial || JSON.stringify(data.suppliers || []) !== localStorage.getItem('kp_suppliers')) {
+          setSuppliers(data.suppliers || []);
+          localStorage.setItem('kp_suppliers', JSON.stringify(data.suppliers || []));
+        }
+        if (isInitial || JSON.stringify(data.purchases || []) !== localStorage.getItem('kp_purchases')) {
+          setPurchases(data.purchases || []);
+          localStorage.setItem('kp_purchases', JSON.stringify(data.purchases || []));
+        }
+        if (isInitial || JSON.stringify(data.purchaseReturns || []) !== localStorage.getItem('kp_purchase_returns')) {
+          setPurchaseReturns(data.purchaseReturns || []);
+          localStorage.setItem('kp_purchase_returns', JSON.stringify(data.purchaseReturns || []));
         }
         
         // Update client last updated timestamp to match server
@@ -462,6 +593,17 @@ export default function App() {
           }
         } else {
           setUsers(defaultUsers);
+        }
+
+        const savedCustomers = localStorage.getItem('kp_customers');
+        if (savedCustomers) {
+          try {
+            setCustomers(JSON.parse(savedCustomers));
+          } catch (e) {
+            setCustomers(INITIAL_CUSTOMERS);
+          }
+        } else {
+          setCustomers(INITIAL_CUSTOMERS);
         }
 
         const savedSync = localStorage.getItem('kp_sync_config');
@@ -794,6 +936,25 @@ export default function App() {
     localStorage.setItem('kp_products', JSON.stringify(updatedProducts));
     saveProductsToServer(updatedProducts);
 
+    // Update Customer loyalty points and/or debt
+    if (newTx.customerId) {
+      const earnedPoints = newTx.pointsEarned !== undefined ? newTx.pointsEarned : Math.floor(newTx.total / 10000);
+      const pointsRedeemed = newTx.pointsRedeemed || 0;
+      const updatedCustomers = customers.map(c => {
+        if (c.id === newTx.customerId) {
+          return {
+            ...c,
+            points: Math.max(0, c.points + earnedPoints - pointsRedeemed),
+            debt: newTx.paymentMethod === 'debt' ? c.debt + newTx.total : c.debt
+          };
+        }
+        return c;
+      });
+      setCustomers(updatedCustomers);
+      localStorage.setItem('kp_customers', JSON.stringify(updatedCustomers));
+      saveCustomersToServer(updatedCustomers);
+    }
+
     // 3. Auto backup to Google Sheets if configured
     performAutoCloudBackup(updatedProducts, updatedTxs);
 
@@ -938,6 +1099,11 @@ export default function App() {
 
   // Count items with low stock warning alerts
   const lowStockCount = products.filter(p => p.stock <= p.minStock).length;
+
+  const isCustomerDisplayMode = window.location.search.includes('display=customer') || window.location.hash.includes('customer-display');
+  if (isCustomerDisplayMode) {
+    return <CustomerDisplay storeSettings={storeSettings} />;
+  }
 
   return (
     <div id="app-root-container" className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans antialiased text-slate-800 dark:text-slate-100 transition-colors duration-200">
@@ -1150,6 +1316,36 @@ export default function App() {
                     </button>
                   )}
 
+                  {/* 4.2. Pembelian & Supplier - Allowed for: Owner & Admin only */}
+                  {['owner', 'admin'].includes(currentUser.role) && (
+                    <button
+                      onClick={() => { setActiveTab('pembelian'); setSelectedTxForReceipt(null); }}
+                      className={`w-full p-2 px-2.5 text-xs font-bold rounded-lg flex items-center gap-2.5 cursor-pointer transition-all relative ${
+                        activeTab === 'pembelian'
+                          ? 'bg-[#78c953]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#78c953] rounded-l-none pl-[7px]'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 border-l-[3px] border-transparent pl-[7px]'
+                      }`}
+                    >
+                      <Truck size={14} className={activeTab === 'pembelian' ? 'text-[#78c953]' : 'text-slate-400 dark:text-slate-500'} />
+                      <span>Pembelian & Supplier</span>
+                    </button>
+                  )}
+
+                  {/* 4.5. Data Pelanggan - Allowed for: Everyone */}
+                  {['owner', 'admin', 'cashier'].includes(currentUser.role) && (
+                    <button
+                      onClick={() => { setActiveTab('customers'); setSelectedTxForReceipt(null); }}
+                      className={`w-full p-2 px-2.5 text-xs font-bold rounded-lg flex items-center gap-2.5 cursor-pointer transition-all relative ${
+                        activeTab === 'customers'
+                          ? 'bg-[#78c953]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#78c953] rounded-l-none pl-[7px]'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 border-l-[3px] border-transparent pl-[7px]'
+                      }`}
+                    >
+                      <Users size={14} className={activeTab === 'customers' ? 'text-[#78c953]' : 'text-slate-400 dark:text-slate-500'} />
+                      <span>Data Pelanggan</span>
+                    </button>
+                  )}
+
                   {/* 5. Pengaturan - Allowed for: Owner & Admin only */}
                   {['owner', 'admin'].includes(currentUser.role) && (
                     <button
@@ -1208,6 +1404,7 @@ export default function App() {
                         {activeTab === 'cashier' && 'Aplikasi Kasir POS'}
                         {activeTab === 'history' && 'Arsip Riwayat Transaksi'}
                         {activeTab === 'inventory' && 'Manajemen Stok & Cloud Sync'}
+                        {activeTab === 'pembelian' && 'Pembelian & Retur Supplier'}
                         {activeTab === 'settings' && 'Setelan Operasional'}
                         
                         {lowStockCount > 0 && currentUser.role !== 'cashier' && (
@@ -1281,6 +1478,16 @@ export default function App() {
                     </button>
                   )}
 
+                  {/* 3.5. Pelanggan */}
+                  {['owner', 'admin', 'cashier'].includes(currentUser.role) && (
+                    <button
+                      onClick={() => { setActiveTab('customers'); setSelectedTxForReceipt(null); }}
+                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'customers' ? 'bg-[#78c953] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
+                    >
+                      Pelanggan
+                    </button>
+                  )}
+
                   {/* 4. Stok Barang */}
                   {['owner', 'admin'].includes(currentUser.role) && (
                     <button
@@ -1288,6 +1495,16 @@ export default function App() {
                       className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'inventory' ? 'bg-[#78c953] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
                     >
                       Stok & Barang
+                    </button>
+                  )}
+
+                  {/* 4.2. Pembelian */}
+                  {['owner', 'admin'].includes(currentUser.role) && (
+                    <button
+                      onClick={() => { setActiveTab('pembelian'); setSelectedTxForReceipt(null); }}
+                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'pembelian' ? 'bg-[#78c953] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
+                    >
+                      Pembelian
                     </button>
                   )}
 
@@ -1349,6 +1566,7 @@ export default function App() {
                         products={products}
                         categories={categories}
                         currentUser={currentUser}
+                        customers={customers}
                         onCheckoutSuccess={handleCheckoutSuccess}
                         storeSettings={storeSettings}
                         isFullscreen={isPosFullscreen}
@@ -1421,6 +1639,55 @@ export default function App() {
                         currentUser={currentUser}
                         users={users}
                         onUpdateUsers={handleUpdateUsers}
+                      />
+                    )}
+
+                    {activeTab === 'customers' && (
+                      <CustomerManager
+                        customers={customers}
+                        onUpdateCustomers={(updated) => {
+                          setCustomers(updated);
+                          localStorage.setItem('kp_customers', JSON.stringify(updated));
+                          saveCustomersToServer(updated);
+                        }}
+                        currentUser={currentUser}
+                        transactions={transactions}
+                        onAddTransaction={(tx) => {
+                          const updated = [tx, ...transactions];
+                          setTransactions(updated);
+                          localStorage.setItem('kp_transactions', JSON.stringify(updated));
+                          saveTransactionsToServer(updated);
+                        }}
+                      />
+                    )}
+
+                    {activeTab === 'pembelian' && (
+                      <PurchaseManager
+                        products={products}
+                        onUpdateProducts={(updated) => {
+                          setProducts(updated);
+                          localStorage.setItem('kp_products', JSON.stringify(updated));
+                          saveProductsToServer(updated);
+                        }}
+                        suppliers={suppliers}
+                        onUpdateSuppliers={(updated) => {
+                          setSuppliers(updated);
+                          localStorage.setItem('kp_suppliers', JSON.stringify(updated));
+                          saveSuppliersToServer(updated);
+                        }}
+                        purchases={purchases}
+                        onUpdatePurchases={(updated) => {
+                          setPurchases(updated);
+                          localStorage.setItem('kp_purchases', JSON.stringify(updated));
+                          savePurchasesToServer(updated);
+                        }}
+                        purchaseReturns={purchaseReturns}
+                        onUpdatePurchaseReturns={(updated) => {
+                          setPurchaseReturns(updated);
+                          localStorage.setItem('kp_purchase_returns', JSON.stringify(updated));
+                          savePurchaseReturnsToServer(updated);
+                        }}
+                        currentUser={currentUser}
                       />
                     )}
                   </motion.div>

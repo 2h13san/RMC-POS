@@ -36,6 +36,37 @@ const defaultUsers = [
   { id: 'user-3', username: 'kasir', password: 'kasir123', name: 'Rina Kasir', role: 'cashier', active: true }
 ];
 
+const defaultCustomers = [
+  {
+    id: 'cust-1',
+    name: 'Budi Santoso',
+    phone: '081234567890',
+    email: 'budi@gmail.com',
+    memberLevel: 'platinum',
+    points: 120,
+    debt: 0,
+    notes: 'Pelanggan setia'
+  },
+  {
+    id: 'cust-2',
+    name: 'Siti Rahma',
+    phone: '085678901234',
+    email: 'siti@yahoo.com',
+    memberLevel: 'gold',
+    points: 75,
+    debt: 45000,
+    notes: 'Sering ambil grosir'
+  },
+  {
+    id: 'cust-3',
+    name: 'Andi Wijaya',
+    phone: '089912345678',
+    memberLevel: 'regular',
+    points: 15,
+    debt: 0,
+  }
+];
+
 const defaultStoreSettings = {
   name: "KASIR PINTAR COFFEE & EATERY",
   address: "Jl. Sudirman No. 45, Jakarta",
@@ -186,6 +217,41 @@ const INITIAL_TRANSACTIONS = [
   }
 ];
 
+const defaultSuppliers = [
+  { id: 'sup-1', name: 'PT Indofood CBP', phone: '021-5708800', address: 'Sudirman Plaza, Jakarta', debt: 1500000 },
+  { id: 'sup-2', name: 'CV Kopi Mulia', phone: '0811-222-333', address: 'Bandung, Jawa Barat', debt: 0 },
+  { id: 'sup-3', name: 'Distributor Sembako Jaya', phone: '031-8901234', address: 'Surabaya, Jawa Timur', debt: 500000 }
+];
+
+const defaultPurchases = [
+  {
+    id: 'pur-1',
+    purchaseNumber: 'PO/20260601/001',
+    date: '2026-06-01T10:00:00Z',
+    supplierId: 'sup-1',
+    supplierName: 'PT Indofood CBP',
+    items: [
+      { productId: 'prod-1', sku: 'MKN-001', name: 'Nasi Goreng Spesial', costPrice: 15000, qty: 100, total: 1500000 }
+    ],
+    total: 1500000,
+    paymentStatus: 'debt'
+  },
+  {
+    id: 'pur-2',
+    purchaseNumber: 'PO/20260605/001',
+    date: '2026-06-05T14:00:00Z',
+    supplierId: 'sup-2',
+    supplierName: 'CV Kopi Mulia',
+    items: [
+      { productId: 'prod-4', sku: 'KOP-002', name: 'Kopi Susu Gula Aren', costPrice: 8000, qty: 100, total: 800000 }
+    ],
+    total: 800000,
+    paymentStatus: 'paid'
+  }
+];
+
+const defaultPurchaseReturns = [];
+
 function readData() {
   try {
     if (fs.existsSync(DATA_FILE)) {
@@ -197,8 +263,12 @@ function readData() {
       if (!parsed.categories) { parsed.categories = INITIAL_CATEGORIES; updated = true; }
       if (!parsed.transactions) { parsed.transactions = INITIAL_TRANSACTIONS; updated = true; }
       if (!parsed.users) { parsed.users = defaultUsers; updated = true; }
+      if (!parsed.customers) { parsed.customers = defaultCustomers; updated = true; }
       if (!parsed.storeSettings) { parsed.storeSettings = defaultStoreSettings; updated = true; }
       if (!parsed.syncConfig) { parsed.syncConfig = defaultSyncConfig; updated = true; }
+      if (!parsed.suppliers) { parsed.suppliers = defaultSuppliers; updated = true; }
+      if (!parsed.purchases) { parsed.purchases = defaultPurchases; updated = true; }
+      if (!parsed.purchaseReturns) { parsed.purchaseReturns = defaultPurchaseReturns; updated = true; }
       if (!parsed.lastUpdated) { parsed.lastUpdated = 1700000000000; updated = true; }
       
       if (updated) {
@@ -215,8 +285,12 @@ function readData() {
     categories: INITIAL_CATEGORIES,
     transactions: INITIAL_TRANSACTIONS,
     users: defaultUsers,
+    customers: defaultCustomers,
     storeSettings: defaultStoreSettings,
     syncConfig: defaultSyncConfig,
+    suppliers: defaultSuppliers,
+    purchases: defaultPurchases,
+    purchaseReturns: defaultPurchaseReturns,
     lastUpdated: 1700000000000
   };
   writeData(defaultData);
@@ -291,6 +365,14 @@ app.post('/api/users', (req, res) => {
   res.json({ success: true, lastUpdated: data.lastUpdated });
 });
 
+app.post('/api/customers', (req, res) => {
+  const data = readData();
+  data.customers = req.body;
+  data.lastUpdated = Date.now();
+  writeData(data);
+  res.json({ success: true, lastUpdated: data.lastUpdated });
+});
+
 app.post('/api/store-settings', (req, res) => {
   const data = readData();
   data.storeSettings = req.body;
@@ -306,6 +388,31 @@ app.post('/api/sync-config', (req, res) => {
   writeData(data);
   res.json({ success: true, lastUpdated: data.lastUpdated });
 });
+
+app.post('/api/suppliers', (req, res) => {
+  const data = readData();
+  data.suppliers = req.body;
+  data.lastUpdated = Date.now();
+  writeData(data);
+  res.json({ success: true, lastUpdated: data.lastUpdated });
+});
+
+app.post('/api/purchases', (req, res) => {
+  const data = readData();
+  data.purchases = req.body;
+  data.lastUpdated = Date.now();
+  writeData(data);
+  res.json({ success: true, lastUpdated: data.lastUpdated });
+});
+
+app.post('/api/purchase-returns', (req, res) => {
+  const data = readData();
+  data.purchaseReturns = req.body;
+  data.lastUpdated = Date.now();
+  writeData(data);
+  res.json({ success: true, lastUpdated: data.lastUpdated });
+});
+
 
 async function startServer() {
   // Vite dev server middleware

@@ -13,6 +13,18 @@ export interface Product {
   stock: number;
   minStock: number; // Minimum threshold before low stock alert
   imageUrl?: string;
+  
+  // Tiered Pricing fields (5 Levels)
+  tier1Name?: string;
+  tier1Price?: number;
+  tier2Name?: string;
+  tier2Price?: number;
+  tier3Name?: string;
+  tier3Price?: number;
+  tier4Name?: string;
+  tier4Price?: number;
+  tier5Name?: string;
+  tier5Price?: number;
 }
 
 export interface TransactionItem {
@@ -24,6 +36,8 @@ export interface TransactionItem {
   qty: number;
   discount: number; // discount amount per item
   total: number;
+  selectedTierIndex?: number; // 0 to 4
+  selectedTierName?: string;  // e.g., "Eceran", "Renceng", "Dus"
 }
 
 export interface Transaction {
@@ -35,11 +49,15 @@ export interface Transaction {
   discountTotal: number;
   taxTotal: number;
   total: number;
-  paymentMethod: 'cash' | 'qris' | 'gopay' | 'ovo' | 'dana' | 'shopeepay';
+  paymentMethod: 'cash' | 'qris' | 'gopay' | 'ovo' | 'dana' | 'shopeepay' | 'debt';
   cashAmount?: number;
   changeAmount?: number;
   cashierId: string;
   cashierName: string;
+  customerId?: string;
+  customerName?: string;
+  pointsRedeemed?: number;
+  pointsEarned?: number;
 }
 
 export interface User {
@@ -289,3 +307,103 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     cashierName: 'Fajar Admin',
   },
 ];
+
+export interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  memberLevel: 'regular' | 'gold' | 'platinum';
+  points: number;
+  debt: number; // piutang
+  notes?: string;
+}
+
+export const INITIAL_CUSTOMERS: Customer[] = [
+  {
+    id: 'cust-1',
+    name: 'Budi Santoso',
+    phone: '081234567890',
+    email: 'budi@gmail.com',
+    memberLevel: 'platinum',
+    points: 120,
+    debt: 0,
+    notes: 'Pelanggan setia'
+  },
+  {
+    id: 'cust-2',
+    name: 'Siti Rahma',
+    phone: '085678901234',
+    email: 'siti@yahoo.com',
+    memberLevel: 'gold',
+    points: 75,
+    debt: 45000,
+    notes: 'Sering ambil grosir'
+  },
+  {
+    id: 'cust-3',
+    name: 'Andi Wijaya',
+    phone: '089912345678',
+    memberLevel: 'regular',
+    points: 15,
+    debt: 0,
+  }
+];
+
+export interface Supplier {
+  id: string;
+  name: string;
+  phone: string;
+  address: string;
+  debt: number; // Saldo hutang kita ke supplier ini
+}
+
+export interface PurchaseItem {
+  productId: string;
+  sku: string;
+  name: string;
+  costPrice: number; // Harga beli per unit
+  qty: number;
+  total: number;
+}
+
+export interface Purchase {
+  id: string;
+  purchaseNumber: string; // e.g. PO/20260718/001
+  date: string; // ISO string
+  supplierId: string;
+  supplierName: string;
+  items: PurchaseItem[];
+  total: number;
+  paymentStatus: 'paid' | 'debt'; // Lunas atau Hutang
+}
+
+export interface PurchaseReturnItem {
+  productId: string;
+  sku: string;
+  name: string;
+  costPrice: number; // Harga beli per unit
+  qty: number; // Jumlah yang diretur
+  total: number;
+}
+
+export interface PurchaseReturn {
+  id: string;
+  returnNumber: string; // e.g. RET-PO/20260718/001
+  purchaseId: string; // ID Pembelian asal
+  purchaseNumber: string; // Nomor Pembelian asal
+  date: string; // ISO string
+  supplierId: string;
+  supplierName: string;
+  items: PurchaseReturnItem[];
+  total: number;
+  refundType: 'potong_hutang' | 'tunai'; // Potong Hutang atau Tunai
+  notes?: string;
+}
+
+export const INITIAL_SUPPLIERS: Supplier[] = [
+  { id: 'sup-1', name: 'PT Indofood CBP', phone: '021-5708800', address: 'Sudirman Plaza, Jakarta', debt: 1500000 },
+  { id: 'sup-2', name: 'CV Kopi Mulia', phone: '0811-222-333', address: 'Bandung, Jawa Barat', debt: 0 },
+  { id: 'sup-3', name: 'Distributor Sembako Jaya', phone: '031-8901234', address: 'Surabaya, Jawa Timur', debt: 500000 }
+];
+

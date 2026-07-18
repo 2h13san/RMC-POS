@@ -103,6 +103,19 @@ export default function InventoryManager({
   const [stock, setStock] = useState(0);
   const [minStock, setMinStock] = useState(5);
   const [imageUrl, setImageUrl] = useState('');
+
+  // 5 Pricing Tiers State
+  const [tier1Name, setTier1Name] = useState('Eceran');
+  const [tier1Price, setTier1Price] = useState(0);
+  const [tier2Name, setTier2Name] = useState('Renceng');
+  const [tier2Price, setTier2Price] = useState(0);
+  const [tier3Name, setTier3Name] = useState('Pak');
+  const [tier3Price, setTier3Price] = useState(0);
+  const [tier4Name, setTier4Name] = useState('Dus');
+  const [tier4Price, setTier4Price] = useState(0);
+  const [tier5Name, setTier5Name] = useState('Grosir');
+  const [tier5Price, setTier5Price] = useState(0);
+
   const [isUploadingDrive, setIsUploadingDrive] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('');
   const productFileInputRef = useRef<HTMLInputElement>(null);
@@ -187,6 +200,19 @@ export default function InventoryManager({
     setMinStock(5);
     setImageUrl('');
     setUploadStatus('');
+
+    // Default 5 Tiers
+    setTier1Name('Eceran');
+    setTier1Price(0);
+    setTier2Name('Renceng');
+    setTier2Price(0);
+    setTier3Name('Pak');
+    setTier3Price(0);
+    setTier4Name('Dus');
+    setTier4Price(0);
+    setTier5Name('Grosir');
+    setTier5Price(0);
+
     setIsFormOpen(true);
   };
 
@@ -201,12 +227,28 @@ export default function InventoryManager({
     setMinStock(p.minStock);
     setImageUrl(p.imageUrl || '');
     setUploadStatus('');
+
+    // Load 5 Tiers
+    setTier1Name(p.tier1Name || 'Eceran');
+    setTier1Price(p.tier1Price !== undefined ? p.tier1Price : p.price);
+    setTier2Name(p.tier2Name || 'Renceng');
+    setTier2Price(p.tier2Price || 0);
+    setTier3Name(p.tier3Name || 'Pak');
+    setTier3Price(p.tier3Price || 0);
+    setTier4Name(p.tier4Name || 'Dus');
+    setTier4Price(p.tier4Price || 0);
+    setTier5Name(p.tier5Name || 'Grosir');
+    setTier5Price(p.tier5Price || 0);
+
     setIsFormOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+
+    // Build values, fallback tier1 to price if not set
+    const finalTier1Price = tier1Price > 0 ? tier1Price : price;
 
     if (editingProduct) {
       onUpdateProduct({
@@ -218,7 +260,17 @@ export default function InventoryManager({
         costPrice,
         stock,
         minStock,
-        imageUrl
+        imageUrl,
+        tier1Name,
+        tier1Price: finalTier1Price,
+        tier2Name,
+        tier2Price,
+        tier3Name,
+        tier3Price,
+        tier4Name,
+        tier4Price,
+        tier5Name,
+        tier5Price,
       });
     } else {
       onAddProduct({
@@ -229,7 +281,17 @@ export default function InventoryManager({
         costPrice,
         stock,
         minStock,
-        imageUrl
+        imageUrl,
+        tier1Name,
+        tier1Price: finalTier1Price,
+        tier2Name,
+        tier2Price,
+        tier3Name,
+        tier3Price,
+        tier4Name,
+        tier4Price,
+        tier5Name,
+        tier5Price,
       });
     }
     setIsFormOpen(false);
@@ -500,7 +562,18 @@ export default function InventoryManager({
                         </span>
                       </td>
                       <td className="p-3 text-right font-medium text-slate-600 dark:text-slate-400">{p.costPrice.toLocaleString('id-ID')}</td>
-                      <td className="p-3 text-right font-semibold text-slate-800 dark:text-slate-200">{p.price.toLocaleString('id-ID')}</td>
+                      <td className="p-3 text-right">
+                        <div className="font-semibold text-slate-800 dark:text-slate-200">Rp {p.price.toLocaleString('id-ID')}</div>
+                        {((p.tier1Price && p.tier1Price !== p.price) || p.tier2Price || p.tier3Price || p.tier4Price || p.tier5Price) ? (
+                          <div className="flex flex-col items-end gap-0.5 mt-1 text-[9px] text-slate-400 dark:text-slate-500 font-mono">
+                            {p.tier1Price && <div>{p.tier1Name || 'Eceran'}: Rp {p.tier1Price.toLocaleString('id-ID')}</div>}
+                            {p.tier2Price ? <div>{p.tier2Name || 'Renceng'}: Rp {p.tier2Price.toLocaleString('id-ID')}</div> : null}
+                            {p.tier3Price ? <div>{p.tier3Name || 'Pak'}: Rp {p.tier3Price.toLocaleString('id-ID')}</div> : null}
+                            {p.tier4Price ? <div>{p.tier4Name || 'Dus'}: Rp {p.tier4Price.toLocaleString('id-ID')}</div> : null}
+                            {p.tier5Price ? <div>{p.tier5Name || 'Grosir'}: Rp {p.tier5Price.toLocaleString('id-ID')}</div> : null}
+                          </div>
+                        ) : null}
+                      </td>
                       
                       {/* Interactive Stock Column */}
                       <td className="p-3">
@@ -627,7 +700,13 @@ export default function InventoryManager({
                     min="0"
                     required
                     value={price}
-                    onChange={(e) => setPrice(Math.max(0, parseInt(e.target.value) || 0))}
+                    onChange={(e) => {
+                      const val = Math.max(0, parseInt(e.target.value) || 0);
+                      setPrice(val);
+                      if (tier1Price === 0 || tier1Price === price) {
+                        setTier1Price(val);
+                      }
+                    }}
                     className="w-full p-2 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 outline-hidden focus:bg-white dark:focus:bg-slate-900"
                   />
                 </div>
@@ -655,6 +734,111 @@ export default function InventoryManager({
                     onChange={(e) => setMinStock(Math.max(0, parseInt(e.target.value) || 0))}
                     className="w-full p-2 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 outline-hidden focus:bg-white dark:focus:bg-slate-900"
                   />
+                </div>
+              </div>
+
+              {/* Tiered Pricing Section */}
+              <div className="border-t border-slate-100 dark:border-slate-800 pt-3 space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 block">Harga Jual Bertingkat (5 Tingkat Harga)</label>
+                  <span className="text-[9px] text-slate-400 dark:text-slate-500">Kustomisasi nama unit & harga</span>
+                </div>
+                
+                <div className="space-y-2">
+                  {/* Tier 1 */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 w-16 shrink-0">Tingkat 1:</span>
+                    <input
+                      type="text"
+                      placeholder="Nama unit (cth: Eceran)"
+                      value={tier1Name}
+                      onChange={(e) => setTier1Name(e.target.value)}
+                      className="flex-1 p-1.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Harga (Rp)"
+                      value={tier1Price || ''}
+                      onChange={(e) => setTier1Price(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="w-28 p-1.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200"
+                    />
+                  </div>
+
+                  {/* Tier 2 */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 w-16 shrink-0">Tingkat 2:</span>
+                    <input
+                      type="text"
+                      placeholder="Nama unit (cth: Renceng)"
+                      value={tier2Name}
+                      onChange={(e) => setTier2Name(e.target.value)}
+                      className="flex-1 p-1.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Harga (Rp)"
+                      value={tier2Price || ''}
+                      onChange={(e) => setTier2Price(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="w-28 p-1.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200"
+                    />
+                  </div>
+
+                  {/* Tier 3 */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 w-16 shrink-0">Tingkat 3:</span>
+                    <input
+                      type="text"
+                      placeholder="Nama unit (cth: Pak)"
+                      value={tier3Name}
+                      onChange={(e) => setTier3Name(e.target.value)}
+                      className="flex-1 p-1.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Harga (Rp)"
+                      value={tier3Price || ''}
+                      onChange={(e) => setTier3Price(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="w-28 p-1.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200"
+                    />
+                  </div>
+
+                  {/* Tier 4 */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 w-16 shrink-0">Tingkat 4:</span>
+                    <input
+                      type="text"
+                      placeholder="Nama unit (cth: Dus)"
+                      value={tier4Name}
+                      onChange={(e) => setTier4Name(e.target.value)}
+                      className="flex-1 p-1.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Harga (Rp)"
+                      value={tier4Price || ''}
+                      onChange={(e) => setTier4Price(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="w-28 p-1.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200"
+                    />
+                  </div>
+
+                  {/* Tier 5 */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 w-16 shrink-0">Tingkat 5:</span>
+                    <input
+                      type="text"
+                      placeholder="Nama unit (cth: Grosir)"
+                      value={tier5Name}
+                      onChange={(e) => setTier5Name(e.target.value)}
+                      className="flex-1 p-1.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Harga (Rp)"
+                      value={tier5Price || ''}
+                      onChange={(e) => setTier5Price(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="w-28 p-1.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200"
+                    />
+                  </div>
                 </div>
               </div>
 
