@@ -1,0 +1,8 @@
+{
+  "name": "Kasir Pintar Pro",
+  "description": "Sistem Kasir (POS) Profesional dengan sinkronisasi Google Sheets, manajemen stok real-time, laporan keuangan, dan support printer thermal Bluetooth.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

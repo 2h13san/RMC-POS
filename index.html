@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kasir Pintar</title>
+    
+    <!-- PWA Meta Tags & Icons -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#78c953" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Kasir Pintar" />
+    <link rel="apple-touch-icon" href="/icon.jpg" />
+    <link rel="icon" type="image/jpeg" href="/icon.jpg" />
+    
+    <!-- Service Worker & PWA Installer Listeners -->
+    <script>
+      window.deferredPrompt = null;
+      try {
+        window.addEventListener('beforeinstallprompt', (e) => {
+          // Prevent Chrome 67 and earlier from automatically showing the prompt
+          e.preventDefault();
+          // Stash the event so it can be triggered later.
+          window.deferredPrompt = e;
+          // Dynamically notify React components that installation is ready
+          window.dispatchEvent(new Event('pwa-prompt-available'));
+        });
+
+        window.addEventListener('appinstalled', (evt) => {
+          console.log('Kasir Pintar Pro PWA installed successfully.');
+          window.deferredPrompt = null;
+          window.dispatchEvent(new Event('pwa-installed'));
+        });
+
+        // Safe Service Worker Registration: prevent error if inside a sandboxed iframe
+        const isIframe = window.self !== window.top;
+        if (!isIframe && 'serviceWorker' in navigator) {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+              .then(reg => console.log('Service Worker registered successfully:', reg.scope))
+              .catch(err => console.error('Service Worker registration failed:', err));
+          });
+        }
+      } catch (err) {
+        console.warn('PWA initialization error ignored:', err);
+      }
+    </script>
+  </head>
+  <body class="bg-slate-50 text-slate-800">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
