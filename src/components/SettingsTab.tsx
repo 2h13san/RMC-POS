@@ -48,6 +48,12 @@ export default function SettingsTab({
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [isInstalled, setIsInstalled] = useState(false);
 
+  // Promo and info states
+  const [promos, setPromos] = useState<{ title: string; text: string }[]>(settings.promos || []);
+  const [newPromoTitle, setNewPromoTitle] = useState('');
+  const [newPromoText, setNewPromoText] = useState('');
+  const [editingPromoIndex, setEditingPromoIndex] = useState<number | null>(null);
+
   // Focus tracking to prevent real-time cloud background poll from overwriting active inputs
   const [isNameFocused, setIsNameFocused] = useState(false);
   const [isAddressFocused, setIsAddressFocused] = useState(false);
@@ -212,6 +218,7 @@ export default function SettingsTab({
       phone: updatedFields.phone !== undefined ? updatedFields.phone : phone,
       isTaxEnabled: updatedFields.isTaxEnabled !== undefined ? updatedFields.isTaxEnabled : isTaxEnabled,
       taxPercentage: updatedFields.taxPercentage !== undefined ? updatedFields.taxPercentage : taxPercentage,
+      promos: updatedFields.promos !== undefined ? updatedFields.promos : promos,
     }, true, persistToServer);
   };
 
@@ -253,6 +260,63 @@ export default function SettingsTab({
   const handleTaxPercentageChange = (val: number) => {
     setTaxPercentage(val);
     propagateState({ taxPercentage: val }, true);
+  };
+
+  const handleAddPromo = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPromoTitle.trim() || !newPromoText.trim()) {
+      showToast("Judul dan isi keterangan promo tidak boleh kosong!", 'warning');
+      return;
+    }
+
+    let updatedPromos = [...promos];
+    if (editingPromoIndex !== null) {
+      // Edit mode
+      updatedPromos[editingPromoIndex] = {
+        title: newPromoTitle.trim(),
+        text: newPromoText.trim()
+      };
+      setEditingPromoIndex(null);
+      showToast("Promo berhasil diperbarui!", 'success');
+    } else {
+      // Add mode
+      updatedPromos.push({
+        title: newPromoTitle.trim(),
+        text: newPromoText.trim()
+      });
+      showToast("Promo baru berhasil ditambahkan!", 'success');
+    }
+
+    setPromos(updatedPromos);
+    setNewPromoTitle('');
+    setNewPromoText('');
+    propagateState({ promos: updatedPromos }, true);
+  };
+
+  const handleEditPromo = (index: number) => {
+    setEditingPromoIndex(index);
+    setNewPromoTitle(promos[index].title);
+    setNewPromoText(promos[index].text);
+  };
+
+  const handleCancelEditPromo = () => {
+    setEditingPromoIndex(null);
+    setNewPromoTitle('');
+    setNewPromoText('');
+  };
+
+  const handleDeletePromo = (index: number) => {
+    const updatedPromos = promos.filter((_, idx) => idx !== index);
+    setPromos(updatedPromos);
+    if (editingPromoIndex === index) {
+      setEditingPromoIndex(null);
+      setNewPromoTitle('');
+      setNewPromoText('');
+    } else if (editingPromoIndex !== null && editingPromoIndex > index) {
+      setEditingPromoIndex(editingPromoIndex - 1);
+    }
+    propagateState({ promos: updatedPromos }, true);
+    showToast("Promo berhasil dihapus!", 'success');
   };
 
   const handleAutoInitSheets = async () => {
@@ -337,6 +401,10 @@ export default function SettingsTab({
     setIsTaxEnabled(settings.isTaxEnabled);
     setTaxPercentage(settings.taxPercentage);
   }, [settings.isTaxEnabled, settings.taxPercentage]);
+
+  useEffect(() => {
+    setPromos(settings.promos || []);
+  }, [settings.promos]);
 
   useEffect(() => {
     if (!isSheetsUrlFocused) {
@@ -428,7 +496,7 @@ export default function SettingsTab({
       {/* Main Header */}
       <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <h2 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-          <Store className="text-[#78c953]" size={18} />
+          <Store className="text-[#ef4444]" size={18} />
           Menu Pengaturan Aplikasi & POS
         </h2>
         <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 leading-normal">
@@ -452,7 +520,7 @@ export default function SettingsTab({
           <div className="space-y-3.5">
             <div>
               <label className="text-[9px] uppercase font-bold text-slate-450 dark:text-slate-500 block mb-1">Nama Toko (Header Struk)</label>
-              <div className="flex items-center gap-2 p-2.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl focus-within:bg-white dark:focus-within:bg-slate-900 focus-within:border-[#78c953] transition-all">
+              <div className="flex items-center gap-2 p-2.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl focus-within:bg-white dark:focus-within:bg-slate-900 focus-within:border-[#ef4444] transition-all">
                 <Store className="text-slate-400 dark:text-slate-500" size={15} />
                 <input
                   type="text"
@@ -469,7 +537,7 @@ export default function SettingsTab({
 
             <div>
               <label className="text-[9px] uppercase font-bold text-slate-450 dark:text-slate-500 block mb-1">Alamat Operasional Toko</label>
-              <div className="flex items-start gap-2 p-2.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl focus-within:bg-white dark:focus-within:bg-slate-900 focus-within:border-[#78c953] transition-all">
+              <div className="flex items-start gap-2 p-2.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl focus-within:bg-white dark:focus-within:bg-slate-900 focus-within:border-[#ef4444] transition-all">
                 <MapPin className="text-slate-400 dark:text-slate-500 mt-0.5" size={15} />
                 <textarea
                   required
@@ -486,7 +554,7 @@ export default function SettingsTab({
 
             <div>
               <label className="text-[9px] uppercase font-bold text-slate-450 dark:text-slate-500 block mb-1">Nomor Telepon Kontak</label>
-              <div className="flex items-center gap-2 p-2.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl focus-within:bg-white dark:focus-within:bg-slate-900 focus-within:border-[#78c953] transition-all">
+              <div className="flex items-center gap-2 p-2.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl focus-within:bg-white dark:focus-within:bg-slate-900 focus-within:border-[#ef4444] transition-all">
                 <Phone className="text-slate-400 dark:text-slate-500" size={15} />
                 <input
                   type="text"
@@ -506,7 +574,7 @@ export default function SettingsTab({
         {/* SUB-JUDUL 2: KONFIGURASI PERPAJAKAN TOKO */}
         <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
           <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-            <div className="p-1.5 bg-[#78c953]/10 text-[#78c953] rounded-lg shrink-0">
+            <div className="p-1.5 bg-[#ef4444]/10 text-[#ef4444] rounded-lg shrink-0">
               <Percent size={14} />
             </div>
             <div>
@@ -531,14 +599,14 @@ export default function SettingsTab({
                   onChange={(e) => handleTaxToggleChange(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-10 h-6 bg-slate-200 dark:bg-slate-750 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#78c953]"></div>
+                <div className="w-10 h-6 bg-slate-200 dark:bg-slate-750 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ef4444]"></div>
               </label>
             </div>
 
             {isTaxEnabled ? (
               <div className="space-y-4">
                 <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900 rounded-xl flex items-start gap-2">
-                  <ShieldAlert className="text-[#78c953] mt-0.5 shrink-0" size={14} />
+                  <ShieldAlert className="text-[#ef4444] mt-0.5 shrink-0" size={14} />
                   <p className="text-[10px] text-emerald-800 dark:text-emerald-300 leading-normal">
                     Kasir saat ini mengenakan PPN sebesar <strong>{taxPercentage}%</strong> pada setiap checkout penjualan. Nilai ini dihitung setelah diskon transaksi dipotong.
                   </p>
@@ -546,7 +614,7 @@ export default function SettingsTab({
                 
                 <div className="p-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded-xl">
                   <label className="text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 block mb-1">Persentase Tarif PPN (%)</label>
-                  <div className="flex items-center gap-1.5 p-2 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus-within:border-[#78c953] focus-within:ring-1 focus-within:ring-[#78c953] rounded-lg max-w-[120px] transition-all">
+                  <div className="flex items-center gap-1.5 p-2 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus-within:border-[#ef4444] focus-within:ring-1 focus-within:ring-[#ef4444] rounded-lg max-w-[120px] transition-all">
                     <Percent size={13} className="text-slate-400 dark:text-slate-500" />
                     <input
                       type="number"
@@ -583,7 +651,7 @@ export default function SettingsTab({
 
           <button
             type="submit"
-            className="p-2.5 px-6 bg-[#78c953] hover:bg-[#68b544] text-white font-bold rounded-xl text-xs flex items-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-100 dark:shadow-none"
+            className="p-2.5 px-6 bg-[#ef4444] hover:bg-[#dc2626] text-white font-bold rounded-xl text-xs flex items-center gap-2 transition-all cursor-pointer shadow-md shadow-red-100 dark:shadow-none"
           >
             <Save size={14} />
             Simpan Identitas & Pajak
@@ -595,7 +663,7 @@ export default function SettingsTab({
       <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-emerald-50 dark:bg-emerald-950/30 text-[#78c953] rounded-lg shrink-0">
+            <div className="p-1.5 bg-emerald-50 dark:bg-emerald-950/30 text-[#ef4444] rounded-lg shrink-0">
               <FileSpreadsheet size={14} />
             </div>
             <div>
@@ -626,7 +694,7 @@ export default function SettingsTab({
                   onChange={(e) => setLocalSheetsUrl(e.target.value)}
                   onFocus={() => setIsSheetsUrlFocused(true)}
                   onBlur={() => setIsSheetsUrlFocused(false)}
-                  className="flex-1 p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 outline-none focus:border-[#78c953] transition-all"
+                  className="flex-1 p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 outline-none focus:border-[#ef4444] transition-all"
                 />
                 <button
                   type="button"
@@ -684,7 +752,7 @@ export default function SettingsTab({
                 type="button"
                 onClick={handleAutoInitSheets}
                 disabled={!localSheetsUrl || isInitializingSheets}
-                className="p-2.5 px-4 bg-[#78c953] hover:bg-[#68b544] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed font-sans"
+                className="p-2.5 px-4 bg-[#ef4444] hover:bg-[#dc2626] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed font-sans"
                 title="Inisialisasi semua target sheet (Sheet_Produk, Sheet_Kategori, Sheet_Transaksi) secara otomatis di Google Spreadsheet Anda tanpa setup sendiri!"
               >
                 {isInitializingSheets ? (
@@ -768,7 +836,7 @@ export default function SettingsTab({
           </div>
           <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase border ${
             isInstalled 
-              ? "bg-emerald-50 text-[#78c953] border-emerald-100" 
+              ? "bg-emerald-50 text-[#ef4444] border-emerald-100" 
               : "bg-amber-50 text-amber-700 border-amber-100"
           }`}>
             {isInstalled ? "Terpasang (Aplikasi)" : "Bisa Diinstal"}
@@ -776,7 +844,7 @@ export default function SettingsTab({
         </div>
 
         <div className="bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row gap-4 items-center">
-          <div className="w-14 h-14 rounded-2xl bg-[#78c953] shadow-md p-1 shrink-0 relative overflow-hidden flex items-center justify-center">
+          <div className="w-14 h-14 rounded-2xl bg-[#ef4444] shadow-md p-1 shrink-0 relative overflow-hidden flex items-center justify-center">
             <img 
               src="/icon.jpg" 
               alt="PWA Icon" 
@@ -801,7 +869,7 @@ export default function SettingsTab({
           <div className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1.5 flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-200">
-                <Monitor size={12} className="text-[#78c953]" />
+                <Monitor size={12} className="text-[#ef4444]" />
                 <span>Untuk Android & Windows/Mac</span>
               </div>
               <p className="text-slate-400 dark:text-slate-500 text-[9px] mt-0.5">
@@ -814,7 +882,7 @@ export default function SettingsTab({
                 <button
                   type="button"
                   onClick={handleInstallApp}
-                  className="w-full p-2 bg-[#78c953] hover:bg-[#68b544] text-white font-extrabold rounded-lg text-[9px] flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs font-sans"
+                  className="w-full p-2 bg-[#ef4444] hover:bg-[#dc2626] text-white font-extrabold rounded-lg text-[9px] flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs font-sans"
                 >
                   <Download size={11} />
                   Pasang Aplikasi Sekarang
@@ -866,7 +934,7 @@ export default function SettingsTab({
             <button
               type="button"
               onClick={handleOpenAdd}
-              className="p-1 px-2.5 bg-[#78c953] hover:bg-[#68b544] text-white rounded-lg text-[9px] font-bold cursor-pointer transition-colors flex items-center gap-1 shrink-0"
+              className="p-1 px-2.5 bg-[#ef4444] hover:bg-[#dc2626] text-white rounded-lg text-[9px] font-bold cursor-pointer transition-colors flex items-center gap-1 shrink-0"
             >
               <UserPlus size={11} />
               Tambah Personel
@@ -889,7 +957,7 @@ export default function SettingsTab({
               <form onSubmit={handleUserSubmit} className="bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 p-4 rounded-xl space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-200/50 dark:border-slate-800 pb-2">
                   <h4 className="text-xs font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-                    {editingUser ? <Edit2 size={12} className="text-indigo-500" /> : <UserPlus size={12} className="text-[#78c953]" />}
+                    {editingUser ? <Edit2 size={12} className="text-indigo-500" /> : <UserPlus size={12} className="text-[#ef4444]" />}
                     {editingUser ? `Edit Akun: ${editingUser.name}` : 'Tambah Akun Baru'}
                   </h4>
                   <button
@@ -917,7 +985,7 @@ export default function SettingsTab({
                       placeholder="Contoh: Rina Amalia"
                       value={formName}
                       onChange={(e) => setFormName(e.target.value)}
-                      className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 outline-hidden focus:border-[#78c953] transition-all"
+                      className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 outline-hidden focus:border-[#ef4444] transition-all"
                     />
                   </div>
 
@@ -930,7 +998,7 @@ export default function SettingsTab({
                       placeholder="Contoh: rina99"
                       value={formUsername}
                       onChange={(e) => setFormUsername(e.target.value.toLowerCase())}
-                      className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 outline-hidden focus:border-[#78c953] transition-all"
+                      className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 outline-hidden focus:border-[#ef4444] transition-all"
                     />
                   </div>
 
@@ -944,7 +1012,7 @@ export default function SettingsTab({
                         placeholder="Minimal 4 karakter"
                         value={formPassword}
                         onChange={(e) => setFormPassword(e.target.value)}
-                        className="w-full p-2 pr-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 outline-hidden focus:border-[#78c953] transition-all"
+                        className="w-full p-2 pr-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 outline-hidden focus:border-[#ef4444] transition-all"
                       />
                       <button
                         type="button"
@@ -963,7 +1031,7 @@ export default function SettingsTab({
                       value={formRole}
                       onChange={(e) => setFormRole(e.target.value as any)}
                       disabled={editingUser?.id === currentUser.id}
-                      className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 outline-hidden focus:border-[#78c953] transition-all"
+                      className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 outline-hidden focus:border-[#ef4444] transition-all"
                     >
                       <option value="cashier">Kasir (Hanya Transaksi & Struk)</option>
                       <option value="admin">Admin (Transaksi, Stok & Setelan)</option>
@@ -985,7 +1053,7 @@ export default function SettingsTab({
                         onChange={(e) => setFormActive(e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-9 h-5 bg-slate-200 dark:bg-slate-750 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#78c953]"></div>
+                      <div className="w-9 h-5 bg-slate-200 dark:bg-slate-750 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#ef4444]"></div>
                     </label>
                   </div>
                 </div>
@@ -1000,7 +1068,7 @@ export default function SettingsTab({
                   </button>
                   <button
                     type="submit"
-                    className="p-2 px-5 bg-[#78c953] hover:bg-[#68b544] text-white font-bold rounded-lg text-[10px] flex items-center gap-1 cursor-pointer transition-colors"
+                    className="p-2 px-5 bg-[#ef4444] hover:bg-[#dc2626] text-white font-bold rounded-lg text-[10px] flex items-center gap-1 cursor-pointer transition-colors"
                   >
                     <Save size={11} />
                     {editingUser ? 'Simpan Perubahan' : 'Tambahkan Akun'}
@@ -1029,7 +1097,7 @@ export default function SettingsTab({
                           ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400'
                           : user.role === 'admin'
                           ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400'
-                          : 'bg-emerald-100 text-[#78c953] dark:bg-emerald-950/40 dark:text-[#78c953]'
+                          : 'bg-emerald-100 text-[#ef4444] dark:bg-emerald-950/40 dark:text-[#ef4444]'
                       }`}>
                         {user.role.substring(0, 2)}
                       </div>
@@ -1102,6 +1170,131 @@ export default function SettingsTab({
             </div>
           </div>
         )}
+      </div>
+
+      {/* SUB-JUDUL 6: PENGATURAN PROMO & INFORMASI LAYAR PELANGGAN */}
+      <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-red-50 dark:bg-red-950/30 text-[#ef4444] rounded-lg shrink-0">
+              <Sparkles size={14} />
+            </div>
+            <div>
+              <h3 className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-wider">VI. Promo & Informasi Layar Pelanggan</h3>
+              <p className="text-[9px] text-slate-400 dark:text-slate-500">Kelola informasi promo, ucapan selamat datang, atau pengumuman yang tampil di layar pelanggan (Customer Display)</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Form Input Promo */}
+        <form onSubmit={handleAddPromo} className="bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 p-4 rounded-xl space-y-3">
+          <h4 className="text-xs font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-1.5 border-b border-slate-200/50 dark:border-slate-800 pb-2">
+            {editingPromoIndex !== null ? (
+              <>
+                <Edit2 size={12} className="text-[#ef4444]" />
+                Edit Promo & Informasi
+              </>
+            ) : (
+              <>
+                <Sparkles size={12} className="text-[#ef4444]" />
+                Tambah Promo & Informasi Baru
+              </>
+            )}
+          </h4>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 block">Judul Promo / Info</label>
+              <input
+                type="text"
+                value={newPromoTitle}
+                onChange={(e) => setNewPromoTitle(e.target.value)}
+                placeholder="Contoh: Diskon Kopi 20% Hari Ini!"
+                className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-100 outline-hidden focus:ring-2 focus:ring-[#ef4444]/20 focus:border-[#ef4444]"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 block">Keterangan / Isi Promo</label>
+              <input
+                type="text"
+                value={newPromoText}
+                onChange={(e) => setNewPromoText(e.target.value)}
+                placeholder="Contoh: Pembelian kopi minimal Rp 50.000 menggunakan QRIS"
+                className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-100 outline-hidden focus:ring-2 focus:ring-[#ef4444]/20 focus:border-[#ef4444]"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-200/50 dark:border-slate-800">
+            {editingPromoIndex !== null && (
+              <button
+                type="button"
+                onClick={handleCancelEditPromo}
+                className="p-1.5 px-3 bg-slate-200 dark:bg-slate-850 hover:bg-slate-300 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
+              >
+                Batal
+              </button>
+            )}
+            <button
+              type="submit"
+              className="p-1.5 px-4 bg-[#ef4444] hover:bg-[#dc2626] text-white rounded-lg text-[10px] font-black tracking-wider uppercase cursor-pointer transition-colors"
+            >
+              {editingPromoIndex !== null ? 'Simpan Perubahan' : 'Tambah Promo'}
+            </button>
+          </div>
+        </form>
+
+        {/* Daftar Promo Aktif */}
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 block">Daftar Promo & Informasi Aktif ({promos.length})</label>
+          
+          {promos.length === 0 ? (
+            <div className="text-center p-6 bg-slate-50 dark:bg-slate-850 rounded-xl border border-dashed border-slate-250 dark:border-slate-800">
+              <p className="text-[10px] text-slate-400 dark:text-slate-500">Belum ada promo kustom yang ditambahkan. Layar pelanggan akan menampilkan promo bawaan.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {promos.map((promo, idx) => (
+                <div 
+                  key={idx} 
+                  className={`p-3.5 bg-slate-50 dark:bg-slate-850 border rounded-xl flex items-start justify-between gap-3 transition-all ${
+                    editingPromoIndex === idx ? 'border-[#ef4444] bg-[#ef4444]/5' : 'border-slate-200 dark:border-slate-800/80'
+                  }`}
+                >
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-bold bg-[#ef4444]/10 text-[#ef4444] px-1.5 py-0.5 rounded-md shrink-0">
+                        Slaid {idx + 1}
+                      </span>
+                      <h5 className="text-[11px] font-black text-slate-800 dark:text-slate-105 truncate">{promo.title}</h5>
+                    </div>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">{promo.text}</p>
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleEditPromo(idx)}
+                      className="p-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-500 dark:text-slate-300 rounded-lg transition-colors cursor-pointer"
+                      title="Edit Slaid"
+                    >
+                      <Edit2 size={11} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePromo(idx)}
+                      className="p-1.5 bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-650 dark:text-red-400 rounded-lg transition-colors cursor-pointer"
+                      title="Hapus Slaid"
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

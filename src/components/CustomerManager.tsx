@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { 
   Users, UserPlus, Edit2, Trash2, Search, DollarSign, Award, Phone, Mail, Plus, X, CheckCircle, 
-  Wallet, ShieldCheck, HelpCircle, FileText, ArrowUpRight
+  Wallet, ShieldCheck, HelpCircle, FileText, ArrowUpRight, MessageSquare
 } from 'lucide-react';
 import { Customer, Transaction, User } from '../types';
 
@@ -57,6 +57,16 @@ export default function CustomerManager({
 
   const formatIDR = (num: number) => {
     return 'Rp ' + num.toLocaleString('id-ID');
+  };
+
+  const getWhatsAppLink = (phone: string) => {
+    let cleanPhone = phone.replace(/[^0-9]/g, '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '62' + cleanPhone.substring(1);
+    } else if (!cleanPhone.startsWith('62') && cleanPhone.startsWith('8')) {
+      cleanPhone = '62' + cleanPhone;
+    }
+    return `https://wa.me/${cleanPhone}`;
   };
 
   // Summary stats
@@ -305,7 +315,7 @@ export default function CustomerManager({
               placeholder="Cari nama, nomor HP, email pelanggan..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full p-2.5 pl-10 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-250 outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#78c953]/10 focus:border-[#78c953] transition-all"
+              className="w-full p-2.5 pl-10 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-250 outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#ef4444]/10 focus:border-[#ef4444] transition-all"
             />
           </div>
 
@@ -324,7 +334,7 @@ export default function CustomerManager({
 
         <button
           onClick={() => { resetForm(); setIsAddOpen(true); }}
-          className="p-2.5 px-4 bg-[#78c953] hover:bg-[#68b544] text-white rounded-xl text-xs font-extrabold flex items-center gap-2 transition-colors cursor-pointer shadow-xs whitespace-nowrap justify-center"
+          className="p-2.5 px-4 bg-[#ef4444] hover:bg-[#dc2626] text-white rounded-xl text-xs font-extrabold flex items-center gap-2 transition-colors cursor-pointer shadow-xs whitespace-nowrap justify-center"
         >
           <UserPlus size={14} />
           Tambah Pelanggan Baru
@@ -339,7 +349,7 @@ export default function CustomerManager({
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/50 dark:border-slate-800/80 overflow-hidden shadow-xs">
             <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/25">
               <h3 className="font-extrabold text-xs text-slate-850 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <Users size={14} className="text-[#78c953]" />
+                <Users size={14} className="text-[#ef4444]" />
                 Database Pelanggan ({filteredCustomers.length})
               </h3>
             </div>
@@ -376,6 +386,16 @@ export default function CustomerManager({
                             <div className="font-bold text-slate-800 dark:text-slate-200">{c.name}</div>
                             <div className="flex items-center gap-3 text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-medium">
                               <span className="flex items-center gap-1"><Phone size={10} /> {c.phone}</span>
+                              <a
+                                href={getWhatsAppLink(c.phone)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-bold bg-emerald-50 dark:bg-emerald-950/35 px-1.5 py-0.5 rounded-md transition-colors"
+                                title="Hubungi via WhatsApp"
+                              >
+                                <MessageSquare size={10} className="shrink-0" />
+                                <span>WA</span>
+                              </a>
                               {c.email && <span className="flex items-center gap-1"><Mail size={10} /> {c.email}</span>}
                             </div>
                             {c.notes && (
@@ -431,7 +451,7 @@ export default function CustomerManager({
                               )}
                               <button
                                 onClick={() => handleStartEdit(c)}
-                                className="p-1.5 text-slate-500 hover:text-[#78c953] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
+                                className="p-1.5 text-slate-500 hover:text-[#ef4444] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
                                 title="Edit Pelanggan"
                               >
                                 <Edit2 size={13} />
@@ -467,7 +487,7 @@ export default function CustomerManager({
               </button>
 
               <h3 className="font-extrabold text-xs text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <UserPlus size={14} className="text-[#78c953]" />
+                <UserPlus size={14} className="text-[#ef4444]" />
                 {editingCustomer ? `Edit: ${editingCustomer.name}` : 'Tambah Pelanggan Baru'}
               </h3>
 
@@ -480,7 +500,7 @@ export default function CustomerManager({
                     placeholder="Contoh: Budi Santoso"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full p-2 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#78c953]/10 focus:border-[#78c953] text-slate-700 dark:text-slate-200"
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#ef4444]/10 focus:border-[#ef4444] text-slate-700 dark:text-slate-200"
                   />
                 </div>
 
@@ -492,7 +512,7 @@ export default function CustomerManager({
                     placeholder="Contoh: 08123456789"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="w-full p-2 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#78c953]/10 focus:border-[#78c953] text-slate-700 dark:text-slate-200"
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#ef4444]/10 focus:border-[#ef4444] text-slate-700 dark:text-slate-200"
                   />
                 </div>
 
@@ -503,7 +523,7 @@ export default function CustomerManager({
                     placeholder="Contoh: budi@gmail.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full p-2 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#78c953]/10 focus:border-[#78c953] text-slate-700 dark:text-slate-200"
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#ef4444]/10 focus:border-[#ef4444] text-slate-700 dark:text-slate-200"
                   />
                 </div>
 
@@ -512,7 +532,7 @@ export default function CustomerManager({
                   <select
                     value={memberLevel}
                     onChange={(e) => setMemberLevel(e.target.value as any)}
-                    className="w-full p-2 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#78c953]/10 focus:border-[#78c953] text-slate-700 dark:text-slate-200"
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#ef4444]/10 focus:border-[#ef4444] text-slate-700 dark:text-slate-200"
                   >
                     <option value="regular">Regular Member (Normal)</option>
                     <option value="gold">Gold Member (Diskon 5%)</option>
@@ -530,7 +550,7 @@ export default function CustomerManager({
                         placeholder="0"
                         value={initialDebt}
                         onChange={(e) => setInitialDebt(e.target.value)}
-                        className="w-full p-2 pl-9 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#78c953]/10 focus:border-[#78c953] text-slate-700 dark:text-slate-200"
+                        className="w-full p-2 pl-9 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#ef4444]/10 focus:border-[#ef4444] text-slate-700 dark:text-slate-200"
                       />
                     </div>
                     <p className="text-[9px] text-slate-400 mt-1">Gunakan bila pelanggan memiliki tunggakan/bon yang belum lunas sebelumnya.</p>
@@ -544,13 +564,13 @@ export default function CustomerManager({
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={2}
-                    className="w-full p-2 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#78c953]/10 focus:border-[#78c953] text-slate-700 dark:text-slate-200"
+                    className="w-full p-2 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#ef4444]/10 focus:border-[#ef4444] text-slate-700 dark:text-slate-200"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full p-2.5 bg-[#78c953] hover:bg-[#68b544] text-white rounded-xl text-xs font-extrabold uppercase tracking-wide transition-colors cursor-pointer"
+                  className="w-full p-2.5 bg-[#ef4444] hover:bg-[#dc2626] text-white rounded-xl text-xs font-extrabold uppercase tracking-wide transition-colors cursor-pointer"
                 >
                   {editingCustomer ? 'Simpan Perubahan' : 'Daftarkan Pelanggan'}
                 </button>
@@ -558,26 +578,26 @@ export default function CustomerManager({
             </div>
           ) : (
             <div className="bg-gradient-to-br from-emerald-50 to-slate-50 dark:from-slate-900 dark:to-slate-950/50 p-5 rounded-2xl border border-emerald-150/50 dark:border-slate-850 shadow-xs">
-              <Award className="text-[#78c953] mb-3" size={24} />
+              <Award className="text-[#ef4444] mb-3" size={24} />
               <h4 className="font-extrabold text-xs text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-2">Program Loyalty & Piutang</h4>
               <p className="text-slate-505 dark:text-slate-400 text-[10.5px] leading-relaxed">
                 Database pelanggan mendukung diskon member khusus secara otomatis, pencatatan pinjaman/piutang (bon), dan poin loyalty:
               </p>
               <ul className="mt-3 space-y-2 text-[10px] font-medium text-slate-600 dark:text-slate-400">
                 <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 bg-[#78c953] rounded-full mt-1 shrink-0" />
+                  <div className="w-1.5 h-1.5 bg-[#ef4444] rounded-full mt-1 shrink-0" />
                   <span><strong>Gold Member:</strong> Diskon otomatis 5% untuk setiap pembelian POS.</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 bg-[#78c953] rounded-full mt-1 shrink-0" />
+                  <div className="w-1.5 h-1.5 bg-[#ef4444] rounded-full mt-1 shrink-0" />
                   <span><strong>Platinum Member:</strong> Diskon otomatis 10% untuk setiap pembelian POS.</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 bg-[#78c953] rounded-full mt-1 shrink-0" />
+                  <div className="w-1.5 h-1.5 bg-[#ef4444] rounded-full mt-1 shrink-0" />
                   <span><strong>Loyalty Points:</strong> Mendapatkan 1 poin setiap belanja kelipatan Rp 10.000.</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 bg-[#78c953] rounded-full mt-1 shrink-0" />
+                  <div className="w-1.5 h-1.5 bg-[#ef4444] rounded-full mt-1 shrink-0" />
                   <span><strong>Transaksi Piutang:</strong> Dapat melakukan transaksi "Bayar Nanti/Bon" langsung pada POS kasir.</span>
                 </li>
               </ul>
@@ -623,7 +643,7 @@ export default function CustomerManager({
                     placeholder="Masukkan nominal"
                     value={repayAmount}
                     onChange={(e) => setRepayAmount(e.target.value)}
-                    className="w-full p-2.5 pl-9 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#78c953]/10 focus:border-[#78c953] text-slate-700 dark:text-slate-200"
+                    className="w-full p-2.5 pl-9 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#ef4444]/10 focus:border-[#ef4444] text-slate-700 dark:text-slate-200"
                   />
                 </div>
               </div>
@@ -633,7 +653,7 @@ export default function CustomerManager({
                 <select
                   value={repayMethod}
                   onChange={(e) => setRepayMethod(e.target.value as any)}
-                  className="w-full p-2 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#78c953]/10 focus:border-[#78c953] text-slate-700 dark:text-slate-200"
+                  className="w-full p-2 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-850 rounded-xl text-xs font-semibold outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#ef4444]/10 focus:border-[#ef4444] text-slate-700 dark:text-slate-200"
                 >
                   <option value="cash">Tunai / Cash</option>
                   <option value="qris">QRIS Dinamis</option>
@@ -646,7 +666,7 @@ export default function CustomerManager({
 
               <button
                 type="submit"
-                className="w-full p-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wide transition-colors cursor-pointer shadow-md shadow-emerald-100 dark:shadow-none"
+                className="w-full p-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold uppercase tracking-wide transition-colors cursor-pointer shadow-md shadow-red-100 dark:shadow-none"
               >
                 Konfirmasi Terima Uang
               </button>

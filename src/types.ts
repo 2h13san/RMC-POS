@@ -81,6 +81,7 @@ export interface StoreSettings {
   phone: string;
   isTaxEnabled: boolean;
   taxPercentage: number;
+  promos?: { title: string; text: string }[];
 }
 
 export interface Category {
@@ -406,4 +407,109 @@ export const INITIAL_SUPPLIERS: Supplier[] = [
   { id: 'sup-2', name: 'CV Kopi Mulia', phone: '0811-222-333', address: 'Bandung, Jawa Barat', debt: 0 },
   { id: 'sup-3', name: 'Distributor Sembako Jaya', phone: '031-8901234', address: 'Surabaya, Jawa Timur', debt: 500000 }
 ];
+
+export interface SalesReturnItem {
+  productId: string;
+  sku: string;
+  name: string;
+  price: number;
+  qty: number;
+  refundAmount: number;
+}
+
+export interface SalesReturn {
+  id: string;
+  returnNumber: string;
+  transactionId: string;
+  invoiceNumber: string;
+  date: string;
+  items: SalesReturnItem[];
+  totalRefund: number;
+  cashierId: string;
+  cashierName: string;
+  notes?: string;
+  restock: boolean;
+}
+
+export interface ActivityLog {
+  id: string;
+  userId: string;
+  username: string;
+  action: string;
+  details: string;
+  timestamp: string;
+}
+
+export interface PendingTransaction {
+  id: string;
+  name: string; // descriptive name for pending cart (e.g. "Meja 5", "Pelanggan Antrean 2")
+  timestamp: string;
+  cartItems: TransactionItem[];
+  selectedCustomer?: Customer;
+  notes?: string;
+}
+
+// 1. BRILink Transaction Type
+export interface BrilinkTransaction {
+  id: string;
+  transactionType: 'tarik_tunai' | 'transfer' | 'setor_tunai';
+  date: string;
+  refNumber: string;
+  amount: number;
+  bankName: string;
+  accountNumber: string;
+  recipientName: string;
+  senderName?: string;
+  adminFee: number; // Fee charged to user
+  bankFee: number; // Cost charged by bank (Fee Mitra)
+  totalAmount: number; // For Tarik Tunai: customer hands card/receives cash. For Setor/Transfer: customer hands cash/gets receipt
+  paymentMethod: 'cash' | 'qris' | 'non_cash';
+  cashierId: string;
+  cashierName: string;
+  status: 'success' | 'failed';
+  notes?: string;
+}
+
+// 2. PPOB Transaction Type
+export interface PpobTransaction {
+  id: string;
+  ppobType: 'pln' | 'pdam' | 'pulsa' | 'data' | 'bpjs' | 'internet' | 'lainnya';
+  date: string;
+  customerNumber: string;
+  providerName: string; // e.g. Token PLN 50k, Telkomsel 10k, BPJS Kesehatan
+  amount: number; // Bill or denom price
+  costPrice: number; // Capital price from provider (or cost to vendor)
+  adminFee: number; // Added customer service charge
+  totalAmount: number; // amount + adminFee
+  paymentMethod: 'cash' | 'qris' | 'non_cash';
+  cashierId: string;
+  cashierName: string;
+  status: 'success' | 'failed';
+  notes?: string;
+}
+
+// 3. Cash Session / Automatic Cash Reconciliation (Rekap Kas Otomatis)
+export interface CashSession {
+  id: string;
+  date: string; // e.g. YYYY-MM-DD
+  startTime: string; // ISO
+  endTime?: string; // ISO
+  openedById: string;
+  openedByName: string;
+  closedById?: string;
+  closedByName?: string;
+  initialCash: number; // Modal Awal
+  salesCashTotal: number; // Cash from goods sales
+  brilinkCashIn: number; // Cash received (e.g. Transfer/Setor Tunai)
+  brilinkCashOut: number; // Cash given out (e.g. Tarik Tunai)
+  ppobCashTotal: number; // Cash from PPOB sales
+  nonCashTotal: number; // Non-cash sales total (QRIS, Gopay, etc.)
+  expectedCash: number; // calculated: initialCash + salesCashTotal + brilinkCashIn - brilinkCashOut + ppobCashTotal
+  actualCash?: number; // entered by user at closing
+  difference?: number; // actualCash - expectedCash
+  status: 'open' | 'closed';
+  notes?: string;
+}
+
+
 

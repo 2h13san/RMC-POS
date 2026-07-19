@@ -50,18 +50,39 @@ export default function CustomerDisplay({ storeSettings }: CustomerDisplayProps)
 
   // Rotate welcome greeting/promos on idle screen
   const [promoIndex, setPromoIndex] = useState(0);
-  const promos = useMemo(() => [
-    { title: "Kopi Terbaik Untuk Hari Anda", text: "Dibuat langsung dari biji kopi pilihan nusantara beraroma tinggi." },
-    { title: "Diskon 10% Untuk Pelanggan Setia", text: "Dapatkan promo menarik di hari ulang tahun Anda dengan menunjukkan kartu identitas." },
-    { title: "Cobain Cemilan Baru Kami!", text: "Padukan kopi hangat Anda dengan Croissant gurih yang dipanggang segar setiap pagi." },
-    { title: "Bayar Praktis via QRIS", text: "Mendukung semua pembayaran e-wallet dan mobile banking kesayangan Anda." }
-  ], []);
+  const promos = useMemo(() => {
+    if (storeSettings.promos && storeSettings.promos.length > 0) {
+      return storeSettings.promos;
+    }
+    return [
+      { title: "Kopi Terbaik Untuk Hari Anda", text: "Dibuat langsung dari biji kopi pilihan nusantara beraroma tinggi." },
+      { title: "Diskon 10% Untuk Pelanggan Setia", text: "Dapatkan promo menarik di hari ulang tahun Anda dengan menunjukkan kartu identitas." },
+      { title: "Cobain Cemilan Baru Kami!", text: "Padukan kopi hangat Anda dengan Croissant gurih yang dipanggang segar setiap pagi." },
+      { title: "Bayar Praktis via QRIS", text: "Mendukung semua pembayaran e-wallet dan mobile banking kesayangan Anda." }
+    ];
+  }, [storeSettings.promos]);
+
+  // Handle promoIndex safety
+  useEffect(() => {
+    if (promoIndex >= promos.length) {
+      setPromoIndex(0);
+    }
+  }, [promos.length, promoIndex]);
+
+  const currentPromo = useMemo(() => {
+    if (promos.length === 0) {
+      return { title: "Selamat Datang di Toko Kami", text: "Petugas kami siap melayani pesanan Anda dengan sepenuh hati." };
+    }
+    return promos[promoIndex] || promos[0] || { title: "", text: "" };
+  }, [promos, promoIndex]);
 
   // Update Clock & Promos
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     const promoTimer = setInterval(() => {
-      setPromoIndex(prev => (prev + 1) % promos.length);
+      if (promos.length > 0) {
+        setPromoIndex(prev => (prev + 1) % promos.length);
+      }
     }, 5000);
 
     return () => {
@@ -246,7 +267,7 @@ export default function CustomerDisplay({ storeSettings }: CustomerDisplayProps)
         {/* Store Header bar */}
         <header className="flex justify-between items-center border-b border-slate-800 pb-4 relative z-10">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-[#78c953] text-white rounded-xl flex items-center justify-center shadow-md">
+            <div className="p-2 bg-[#ef4444] text-white rounded-xl flex items-center justify-center shadow-md">
               <Store size={18} />
             </div>
             <div>
@@ -388,7 +409,7 @@ export default function CustomerDisplay({ storeSettings }: CustomerDisplayProps)
         {/* Store Header bar */}
         <header className="flex justify-between items-center border-b border-slate-800 pb-4 relative z-10 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-[#78c953] text-white rounded-xl flex items-center justify-center shadow-md">
+            <div className="p-2 bg-[#ef4444] text-white rounded-xl flex items-center justify-center shadow-md">
               <Store size={18} />
             </div>
             <div>
@@ -498,7 +519,7 @@ export default function CustomerDisplay({ storeSettings }: CustomerDisplayProps)
       {/* Header bar */}
       <header className="flex justify-between items-center border-b border-slate-800 pb-4 relative z-10">
         <div className="flex items-center gap-2.5">
-          <div className="p-2.5 bg-[#78c953] text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/10">
+          <div className="p-2.5 bg-[#ef4444] text-white rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/10">
             <Store size={20} />
           </div>
           <div>
@@ -508,7 +529,7 @@ export default function CustomerDisplay({ storeSettings }: CustomerDisplayProps)
         </div>
         <div className="text-right">
           <p className="text-xs font-black text-slate-200">Stasiun #01</p>
-          <p className="text-[9px] text-[#78c953] font-bold mt-0.5 flex items-center justify-end gap-1 select-none">
+          <p className="text-[9px] text-[#ef4444] font-bold mt-0.5 flex items-center justify-end gap-1 select-none">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping inline-block" /> ONLINE
           </p>
         </div>
@@ -519,8 +540,8 @@ export default function CustomerDisplay({ storeSettings }: CustomerDisplayProps)
         
         <div className="space-y-6">
           {/* Welcome animations with coffee icon */}
-          <div className="mx-auto w-24 h-24 rounded-3xl bg-slate-900 border border-slate-800 text-[#78c953] flex items-center justify-center shadow-xl mb-4 relative">
-            <div className="absolute inset-0 border border-dashed border-[#78c953]/20 rounded-3xl animate-spin [animation-duration:15s]" />
+          <div className="mx-auto w-24 h-24 rounded-3xl bg-slate-900 border border-slate-800 text-[#ef4444] flex items-center justify-center shadow-xl mb-4 relative">
+            <div className="absolute inset-0 border border-dashed border-[#ef4444]/20 rounded-3xl animate-spin [animation-duration:15s]" />
             <Coffee size={40} className="relative z-10 animate-bounce" />
           </div>
 
@@ -531,7 +552,7 @@ export default function CustomerDisplay({ storeSettings }: CustomerDisplayProps)
 
           {/* Dynamic rotating banner slide */}
           <div className="bg-slate-900/60 border border-slate-850 p-6 rounded-2xl relative overflow-hidden text-left shadow-lg max-w-lg mx-auto">
-            <div className="absolute top-3 right-3 text-[#78c953]/30">
+            <div className="absolute top-3 right-3 text-[#ef4444]/30">
               <Gift size={24} />
             </div>
             
@@ -544,12 +565,12 @@ export default function CustomerDisplay({ storeSettings }: CustomerDisplayProps)
                 transition={{ duration: 0.25 }}
                 className="space-y-1"
               >
-                <h3 className="text-xs font-black text-[#78c953] uppercase tracking-wider flex items-center gap-1.5">
+                <h3 className="text-xs font-black text-[#ef4444] uppercase tracking-wider flex items-center gap-1.5">
                   <Sparkles size={11} />
                   PROMO & INFORMASI HARI INI
                 </h3>
-                <h4 className="text-sm font-extrabold text-slate-200 mt-1 leading-tight">{promos[promoIndex].title}</h4>
-                <p className="text-xs text-slate-400 leading-relaxed mt-1.5">{promos[promoIndex].text}</p>
+                <h4 className="text-sm font-extrabold text-slate-200 mt-1 leading-tight">{currentPromo.title}</h4>
+                <p className="text-xs text-slate-400 leading-relaxed mt-1.5">{currentPromo.text}</p>
               </motion.div>
             </AnimatePresence>
 
@@ -559,7 +580,7 @@ export default function CustomerDisplay({ storeSettings }: CustomerDisplayProps)
                 <button
                   key={idx}
                   onClick={() => setPromoIndex(idx)}
-                  className={`h-1.5 rounded-full transition-all cursor-pointer ${idx === promoIndex ? 'w-4 bg-[#78c953]' : 'w-1.5 bg-slate-700 hover:bg-slate-500'}`}
+                  className={`h-1.5 rounded-full transition-all cursor-pointer ${idx === promoIndex ? 'w-4 bg-[#ef4444]' : 'w-1.5 bg-slate-700 hover:bg-slate-500'}`}
                 />
               ))}
             </div>
@@ -579,7 +600,7 @@ export default function CustomerDisplay({ storeSettings }: CustomerDisplayProps)
         <div className="bg-slate-900 border border-slate-850 p-2.5 px-5 rounded-2xl flex items-center gap-4 text-left shadow-md">
           <div className="text-slate-400 text-[10px] font-black uppercase tracking-wider border-r border-slate-850 pr-4">
             <div className="flex items-center gap-1">
-              <Clock size={11} className="text-[#78c953]" />
+              <Clock size={11} className="text-[#ef4444]" />
               <span>Tanggal</span>
             </div>
             <p className="text-xs text-slate-200 font-extrabold mt-0.5">
@@ -588,7 +609,7 @@ export default function CustomerDisplay({ storeSettings }: CustomerDisplayProps)
           </div>
           <div>
             <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest block">Jam Operasional</span>
-            <span className="text-base font-mono font-black text-[#78c953] tracking-wider">
+            <span className="text-base font-mono font-black text-[#ef4444] tracking-wider">
               {currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </span>
           </div>

@@ -1,0 +1,320 @@
+{
+  "products": [
+    {
+      "id": "prod-1",
+      "sku": "MKN-001",
+      "name": "Nasi Goreng Spesial",
+      "category": "Makanan",
+      "price": 25000,
+      "costPrice": 15000,
+      "stock": 27,
+      "minStock": 5
+    },
+    {
+      "id": "prod-2",
+      "sku": "MKN-002",
+      "name": "Mie Goreng Seafood",
+      "category": "Makanan",
+      "price": 28000,
+      "costPrice": 17000,
+      "stock": 12,
+      "minStock": 5
+    },
+    {
+      "id": "prod-3",
+      "sku": "KOP-001",
+      "name": "Espresso Single",
+      "category": "Minuman Kopi",
+      "price": 15000,
+      "costPrice": 6000,
+      "stock": 4,
+      "minStock": 10
+    },
+    {
+      "id": "prod-4",
+      "sku": "KOP-002",
+      "name": "Kopi Susu Gula Aren",
+      "category": "Minuman Kopi",
+      "price": 18000,
+      "costPrice": 8000,
+      "stock": 50,
+      "minStock": 15
+    },
+    {
+      "id": "prod-5",
+      "sku": "KOP-003",
+      "name": "Cafe Latte",
+      "category": "Minuman Kopi",
+      "price": 22000,
+      "costPrice": 10000,
+      "stock": 35,
+      "minStock": 10
+    },
+    {
+      "id": "prod-6",
+      "sku": "NKO-001",
+      "name": "Matcha Latte Ice",
+      "category": "Minuman Non-Kopi",
+      "price": 20000,
+      "costPrice": 9000,
+      "stock": 18,
+      "minStock": 5
+    },
+    {
+      "id": "prod-7",
+      "sku": "NKO-002",
+      "name": "Ice Red Velvet",
+      "category": "Minuman Non-Kopi",
+      "price": 20000,
+      "costPrice": 9000,
+      "stock": 3,
+      "minStock": 8
+    },
+    {
+      "id": "prod-8",
+      "sku": "CAM-001",
+      "name": "Croissant Cokelat",
+      "category": "Camilan",
+      "price": 18000,
+      "costPrice": 11000,
+      "stock": 2,
+      "minStock": 5
+    },
+    {
+      "id": "prod-9",
+      "sku": "CAM-002",
+      "name": "French Fries",
+      "category": "Camilan",
+      "price": 15000,
+      "costPrice": 7000,
+      "stock": 15,
+      "minStock": 5
+    }
+  ],
+  "categories": [
+    {
+      "id": "1",
+      "name": "Makanan",
+      "icon": "Utensils"
+    },
+    {
+      "id": "2",
+      "name": "Minuman Kopi",
+      "icon": "Coffee"
+    },
+    {
+      "id": "3",
+      "name": "Minuman Non-Kopi",
+      "icon": "CupSoda"
+    },
+    {
+      "id": "4",
+      "name": "Camilan",
+      "icon": "Cookie"
+    }
+  ],
+  "transactions": [
+    {
+      "id": "tx-001",
+      "invoiceNumber": "INV/20260604/001",
+      "date": "2026-06-04T09:15:00Z",
+      "items": [
+        {
+          "productId": "prod-4",
+          "sku": "KOP-002",
+          "name": "Kopi Susu Gula Aren",
+          "price": 18000,
+          "costPrice": 8000,
+          "qty": 2,
+          "discount": 0,
+          "total": 36000
+        },
+        {
+          "productId": "prod-8",
+          "sku": "CAM-001",
+          "name": "Croissant Cokelat",
+          "price": 18000,
+          "costPrice": 11000,
+          "qty": 1,
+          "discount": 2000,
+          "total": 16000
+        }
+      ],
+      "subTotal": 54000,
+      "discountTotal": 2000,
+      "taxTotal": 5720,
+      "total": 57720,
+      "paymentMethod": "cash",
+      "cashAmount": 60000,
+      "changeAmount": 2280,
+      "cashierId": "user-3",
+      "cashierName": "Rina Kasir"
+    },
+    {
+      "id": "tx-002",
+      "invoiceNumber": "INV/20260604/002",
+      "date": "2026-06-04T12:30:00Z",
+      "items": [
+        {
+          "productId": "prod-1",
+          "sku": "MKN-001",
+          "name": "Nasi Goreng Spesial",
+          "price": 25000,
+          "costPrice": 15000,
+          "qty": 2,
+          "discount": 0,
+          "total": 50000
+        },
+        {
+          "productId": "prod-5",
+          "sku": "KOP-003",
+          "name": "Cafe Latte",
+          "price": 22000,
+          "costPrice": 10000,
+          "qty": 2,
+          "discount": 0,
+          "total": 44000
+        }
+      ],
+      "subTotal": 94000,
+      "discountTotal": 0,
+      "taxTotal": 10340,
+      "total": 104340,
+      "paymentMethod": "qris",
+      "cashierId": "user-3",
+      "cashierName": "Rina Kasir"
+    }
+  ],
+  "users": [
+    {
+      "id": "user-1",
+      "username": "owner",
+      "password": "owner123",
+      "name": "Adi Pemilik",
+      "role": "owner",
+      "active": true
+    },
+    {
+      "id": "user-2",
+      "username": "admin",
+      "password": "admin123",
+      "name": "Fajar Admin",
+      "role": "admin",
+      "active": true
+    },
+    {
+      "id": "user-3",
+      "username": "kasir",
+      "password": "kasir123",
+      "name": "Rina Kasir",
+      "role": "cashier",
+      "active": true
+    }
+  ],
+  "customers": [
+    {
+      "id": "cust-1",
+      "name": "Budi Santoso",
+      "phone": "081234567890",
+      "email": "budi@gmail.com",
+      "memberLevel": "platinum",
+      "points": 120,
+      "debt": 0,
+      "notes": "Pelanggan setia"
+    },
+    {
+      "id": "cust-2",
+      "name": "Siti Rahma",
+      "phone": "085678901234",
+      "email": "siti@yahoo.com",
+      "memberLevel": "gold",
+      "points": 75,
+      "debt": 45000,
+      "notes": "Sering ambil grosir"
+    },
+    {
+      "id": "cust-3",
+      "name": "Andi Wijaya",
+      "phone": "089912345678",
+      "memberLevel": "regular",
+      "points": 15,
+      "debt": 0
+    }
+  ],
+  "storeSettings": {
+    "name": "KASIR PINTAR COFFEE & EATERY",
+    "address": "Jl. Sudirman No. 45, Jakarta",
+    "phone": "0812-3456-7890",
+    "isTaxEnabled": true,
+    "taxPercentage": 11
+  },
+  "syncConfig": {
+    "googleSheetsUrl": "",
+    "isEnabled": false
+  },
+  "suppliers": [
+    {
+      "id": "sup-1",
+      "name": "PT Indofood CBP",
+      "phone": "021-5708800",
+      "address": "Sudirman Plaza, Jakarta",
+      "debt": 1500000
+    },
+    {
+      "id": "sup-2",
+      "name": "CV Kopi Mulia",
+      "phone": "0811-222-333",
+      "address": "Bandung, Jawa Barat",
+      "debt": 0
+    },
+    {
+      "id": "sup-3",
+      "name": "Distributor Sembako Jaya",
+      "phone": "031-8901234",
+      "address": "Surabaya, Jawa Timur",
+      "debt": 500000
+    }
+  ],
+  "purchases": [
+    {
+      "id": "pur-1",
+      "purchaseNumber": "PO/20260601/001",
+      "date": "2026-06-01T10:00:00Z",
+      "supplierId": "sup-1",
+      "supplierName": "PT Indofood CBP",
+      "items": [
+        {
+          "productId": "prod-1",
+          "sku": "MKN-001",
+          "name": "Nasi Goreng Spesial",
+          "costPrice": 15000,
+          "qty": 100,
+          "total": 1500000
+        }
+      ],
+      "total": 1500000,
+      "paymentStatus": "debt"
+    },
+    {
+      "id": "pur-2",
+      "purchaseNumber": "PO/20260605/001",
+      "date": "2026-06-05T14:00:00Z",
+      "supplierId": "sup-2",
+      "supplierName": "CV Kopi Mulia",
+      "items": [
+        {
+          "productId": "prod-4",
+          "sku": "KOP-002",
+          "name": "Kopi Susu Gula Aren",
+          "costPrice": 8000,
+          "qty": 100,
+          "total": 800000
+        }
+      ],
+      "total": 800000,
+      "paymentStatus": "paid"
+    }
+  ],
+  "purchaseReturns": [],
+  "lastUpdated": 1784457191864
+}

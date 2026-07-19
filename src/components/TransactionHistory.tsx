@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Printer, Calendar, Clock, CreditCard, ChevronRight, ShoppingCart, UserCheck } from 'lucide-react';
-import { Transaction, StoreSettings } from '../types';
+import { Search, Printer, Calendar, Clock, CreditCard, ChevronRight, ShoppingCart, UserCheck, RotateCcw, X, AlertCircle } from 'lucide-react';
+import { Transaction, StoreSettings, SalesReturn } from '../types';
 
 interface TransactionHistoryProps {
   transactions: Transaction[];
@@ -13,6 +13,13 @@ interface TransactionHistoryProps {
   storeSettings: StoreSettings;
   onDeleteTransaction?: (txId: string) => void;
   currentUserRole?: string;
+  onProcessReturn?: (
+    txId: string,
+    returnedItems: { productId: string; qty: number; refundAmount: number; name: string }[],
+    restock: boolean,
+    notes: string
+  ) => void;
+  salesReturns?: SalesReturn[];
 }
 
 export default function TransactionHistory({ 
@@ -20,17 +27,50 @@ export default function TransactionHistory({
   onReprint, 
   storeSettings,
   onDeleteTransaction,
-  currentUserRole
+  currentUserRole,
+  onProcessReturn,
+  salesReturns = []
 }: TransactionHistoryProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMethod, setSelectedMethod] = useState<string>('all');
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
 
-  // Reset confirmation state when selected transaction changes
+  // Return Feature States
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const [returnQtys, setReturnQtys] = useState<Record<string, number>>({});
+  const [returnNotes, setReturnNotes] = useState('');
+  const [restockGoods, setRestockGoods] = useState(true);
+
+  // Reset confirmation and return states when selected transaction changes
   useEffect(() => {
     setIsConfirmDeleteOpen(false);
+    setIsReturnModalOpen(false);
+    setReturnQtys({});
+    setReturnNotes('');
+    setRestockGoods(true);
   }, [selectedTx]);
+
+  // Track already returned quantities for this transaction
+  const alreadyReturnedQtys = useMemo(() => {
+    const qtys: Record<string, number> = {};
+    if (!salesReturns || !selectedTx) return qtys;
+    
+    const txReturns = salesReturns.filter(ret => ret.transactionId === selectedTx.id);
+    txReturns.forEach(ret => {
+      ret.items.forEach(item => {
+        qtys[item.productId] = (qtys[item.productId] || 0) + item.qty;
+      });
+    });
+    return qtys;
+  }, [salesReturns, selectedTx]);
+
+  // Filter returns related to selected transaction
+  const txReturns = useMemo(() => {
+    if (!salesReturns || !selectedTx) return [];
+    return salesReturns.filter(ret => ret.transactionId === selectedTx.id);
+  }, [salesReturns, selectedTx]);
+
 
   // Format currency helper
   const formatIDR = (num: number) => {
@@ -66,7 +106,7 @@ export default function TransactionHistory({
               placeholder="Cari Invoice atau nama Kasir..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 p-2 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-[#78c953] transition-colors"
+              className="w-full pl-9 pr-4 p-2 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-[#ef4444] transition-colors"
             />
           </div>
 
@@ -107,7 +147,7 @@ export default function TransactionHistory({
                     onClick={() => setSelectedTx(t)}
                     className={`p-4 flex items-center justify-between text-xs gap-3 cursor-pointer transition-all rounded-xl mt-1.5 ${
                       isSelected 
-                        ? 'bg-[#78c953]/10 dark:bg-[#78c953]/20 border-2 border-[#78c953]' 
+                        ? 'bg-[#ef4444]/10 dark:bg-[#ef4444]/20 border-2 border-[#ef4444]' 
                         : 'border border-transparent hover:bg-slate-50 dark:hover:bg-slate-950/40'
                     }`}
                   >
@@ -176,7 +216,7 @@ export default function TransactionHistory({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400 dark:text-slate-500 font-semibold">Saluran Pembayaran:</span>
-                    <span className="font-bold text-[#78c953] uppercase">{selectedTx.paymentMethod}</span>
+                    <span className="font-bold text-[#ef4444] uppercase">{selectedTx.paymentMethod}</span>
                   </div>
                 </div>
 
@@ -196,8 +236,26 @@ export default function TransactionHistory({
                   </div>
                 </div>
 
+                {txReturns.length > 0 && (
+                  <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/40 p-3 rounded-xl space-y-1.5 mt-3 text-[10px]">
+                    <div className="flex items-center gap-1 font-bold text-purple-800 dark:text-purple-400">
+                      <AlertCircle size={12} />
+                      <span>Sebagian barang telah diretur:</span>
+                    </div>
+                    <div className="space-y-1 pl-3.5">
+                      {txReturns.map(ret => (
+                        <div key={ret.id} className="text-slate-600 dark:text-slate-450 font-semibold leading-relaxed">
+                          <span className="font-mono font-bold text-purple-700 dark:text-purple-300">{ret.returnNumber}</span>:{' '}
+                          {ret.items.map(i => `${i.name} (x${i.qty})`).join(', ')} {' '}
+                          <span className="font-extrabold text-blue-600 dark:text-blue-400">({formatIDR(ret.totalRefund)})</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
                 {/* Subtotals breakdown list */}
-                <div className="border-t border-slate-100 dark:border-slate-800 pt-3 mt-4 text-xs space-y-1 font-semibold text-slate-600 dark:text-slate-400">
+                <div className="border-t border-slate-100 dark:border-slate-800 pt-3 mt-4 text-xs space-y-1 font-semibold text-slate-600 dark:text-slate-400 font-sans">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
                     <span>{formatIDR(selectedTx.subTotal)}</span>
@@ -219,7 +277,7 @@ export default function TransactionHistory({
                 </div>
               </div>
 
-              {/* Action Button: Reprint & Delete */}
+              {/* Action Button: Reprint, Return & Delete */}
               <div className="border-t border-slate-100 dark:border-slate-800 pt-4 mt-6 space-y-2">
                 <button
                   onClick={() => onReprint(selectedTx)}
@@ -228,6 +286,25 @@ export default function TransactionHistory({
                   <Printer size={16} />
                   Cetak Ulang Struk (Layar Cetak)
                 </button>
+
+                {onProcessReturn && (
+                  <button
+                    onClick={() => {
+                      const initialQtys: Record<string, number> = {};
+                      selectedTx.items.forEach(item => {
+                        initialQtys[item.productId] = 0;
+                      });
+                      setReturnQtys(initialQtys);
+                      setReturnNotes('');
+                      setRestockGoods(true);
+                      setIsReturnModalOpen(true);
+                    }}
+                    className="w-full p-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer transition-all border border-purple-500"
+                  >
+                    <RotateCcw size={15} />
+                    Proses Retur Barang Belanjaan
+                  </button>
+                )}
 
                 {['owner', 'admin'].includes(currentUserRole || '') && onDeleteTransaction && (
                   <>
@@ -278,6 +355,154 @@ export default function TransactionHistory({
         </div>
 
       </div>
+
+      {/* Interactive Sales Return Modal */}
+      {isReturnModalOpen && selectedTx && (
+        <div className="fixed inset-0 z-55 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 select-none animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-xl overflow-hidden flex flex-col border border-slate-100 dark:border-slate-800 animate-scale-in">
+            <div className="p-4 bg-slate-50 dark:bg-slate-950/45 border-b border-slate-150 dark:border-slate-800 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <RotateCcw className="text-purple-600" size={18} />
+                <div>
+                  <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-xs sm:text-sm">Proses Retur Barang Belanjaan</h3>
+                  <p className="text-[9px] sm:text-[10px] text-slate-400 font-semibold mt-0.5">Invoice: {selectedTx.invoiceNumber}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsReturnModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto max-h-[350px] space-y-4">
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Pilih Jumlah Barang yang Diretur</p>
+              
+              <div className="divide-y divide-slate-100 dark:divide-slate-800 space-y-1">
+                {selectedTx.items.map(item => {
+                  const maxReturnQty = item.qty - (alreadyReturnedQtys[item.productId] || 0);
+                  const currentQty = returnQtys[item.productId] || 0;
+                  const itemRefund = currentQty * (item.price - (item.discount || 0));
+
+                  return (
+                    <div key={item.productId} className="py-3 flex justify-between items-center text-xs">
+                      <div className="max-w-[60%]">
+                        <p className="font-bold text-slate-800 dark:text-slate-100">{item.name}</p>
+                        <p className="text-[9.5px] text-slate-450 mt-0.5 font-semibold">
+                          Telah dibeli: <span className="font-bold text-slate-600 dark:text-slate-350">{item.qty} pcs</span>
+                          {alreadyReturnedQtys[item.productId] > 0 && (
+                            <span className="text-purple-600 dark:text-purple-400 ml-1.5 font-extrabold">({alreadyReturnedQtys[item.productId]} diretur)</span>
+                          )}
+                        </p>
+                        <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 mt-1">Refund: {formatIDR(itemRefund)}</p>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        {maxReturnQty > 0 ? (
+                          <div className="flex items-center gap-1.5 font-sans">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReturnQtys(prev => ({
+                                  ...prev,
+                                  [item.productId]: Math.max(0, currentQty - 1)
+                                }));
+                              }}
+                              className="w-6 h-6 bg-slate-100 dark:bg-slate-850 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold rounded-lg cursor-pointer flex items-center justify-center text-xs transition-colors"
+                            >
+                              -
+                            </button>
+                            <span className="font-extrabold text-slate-800 dark:text-slate-100 min-w-5 text-center">{currentQty}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReturnQtys(prev => ({
+                                  ...prev,
+                                  [item.productId]: Math.min(maxReturnQty, currentQty + 1)
+                                }));
+                              }}
+                              className="w-6 h-6 bg-slate-100 dark:bg-slate-850 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold rounded-lg cursor-pointer flex items-center justify-center text-xs transition-colors"
+                            >
+                              +
+                            </button>
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold">/ maks {maxReturnQty}</span>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-red-500 font-bold bg-red-50 dark:bg-red-950/20 p-1 px-2 rounded-md">Semua Diretur</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Restock checkbox & note fields */}
+              <div className="border-t border-slate-150 dark:border-slate-800 pt-4 space-y-3.5">
+                <label className="flex items-center gap-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={restockGoods}
+                    onChange={(e) => setRestockGoods(e.target.checked)}
+                    className="w-4 h-4 text-purple-600 focus:ring-purple-500 rounded border-slate-200"
+                  />
+                  <span>Kembalikan produk yang diretur ke dalam stok barang gudang</span>
+                </label>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-slate-500">Catatan / Alasan Retur Barang</label>
+                  <textarea
+                    placeholder="Contoh: Barang cacat pabrik, salah beli varian..."
+                    value={returnNotes}
+                    onChange={(e) => setReturnNotes(e.target.value)}
+                    className="w-full text-xs font-semibold p-2.5 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-slate-200 outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:border-purple-500 transition-all min-h-[70px]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal footer calculations and checkout actions */}
+            <div className="p-4 bg-slate-50 dark:bg-slate-950/45 border-t border-slate-150 dark:border-slate-800 flex flex-col sm:flex-row gap-3 items-center justify-between">
+              <div className="text-center sm:text-left text-xs">
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase">Estimasi Refund Kasir</p>
+                <p className="text-base font-black text-blue-600 dark:text-blue-400 mt-0.5">
+                  {formatIDR(selectedTx.items.reduce((sum, item) => sum + (returnQtys[item.productId] || 0) * (item.price - (item.discount || 0)), 0))}
+                </p>
+              </div>
+
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setIsReturnModalOpen(false)}
+                  className="flex-1 sm:flex-initial p-2.5 px-4 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={selectedTx.items.reduce((sum, item) => sum + (returnQtys[item.productId] || 0), 0) === 0}
+                  onClick={() => {
+                    const returnedItems = selectedTx.items
+                      .filter(item => (returnQtys[item.productId] || 0) > 0)
+                      .map(item => ({
+                        productId: item.productId,
+                        qty: returnQtys[item.productId],
+                        refundAmount: returnQtys[item.productId] * (item.price - (item.discount || 0)),
+                        name: item.name
+                      }));
+
+                    onProcessReturn?.(selectedTx.id, returnedItems, restockGoods, returnNotes);
+                    setIsReturnModalOpen(false);
+                  }}
+                  className="flex-1 sm:flex-initial p-2.5 px-5 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-200 disabled:text-slate-400 dark:disabled:bg-slate-950/40 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+                >
+                  Proses Retur Selesai
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -122,6 +122,7 @@ export default function InventoryManager({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const restoreInputRef = useRef<HTMLInputElement>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
   const [restoreStatus, setRestoreStatus] = useState<string | null>(null);
 
   // Auto-sheets initialization states
@@ -138,6 +139,14 @@ export default function InventoryManager({
 
   // State for safe delete confirmation overlay modal
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+
+  // Import CSV Validation Report State
+  const [importReport, setImportReport] = useState<{
+    totalRows: number;
+    errors: { row: number; sku: string; name: string; errors: string[] }[];
+    validProducts: any[];
+  } | null>(null);
+  const [showImportReportModal, setShowImportReportModal] = useState(false);
 
   // Local state for Sheets Sync to prevent continuous overwrite while typing on cross-device
   const [localSheetsUrl, setLocalSheetsUrl] = useState(syncConfig.googleSheetsUrl || '');
@@ -311,10 +320,23 @@ export default function InventoryManager({
 
   // Import / Export products as CSV (Excel compatible) template
   const handleExportProductCSV = () => {
-    let csvContent = "data:text/csv;charset=utf-8,";
+    let csvContent = "sep=,\n";
     csvContent += "SKU,Nama Produk,Kategori,Harga Jual,Harga Jual Pokok,Stok Saat Ini,Batas Minimum Stok\n";
     
-    products.forEach(p => {
+    // Add default template rows if there are no products, or add existing products
+    const listToExport = products.length > 0 ? products : [
+      { sku: "MKN-001", name: "Nasi Goreng Spesial", category: "Makanan", price: 25000, costPrice: 15000, stock: 27, minStock: 5 },
+      { sku: "MKN-002", name: "Mie Goreng Seafood", category: "Makanan", price: 28000, costPrice: 17000, stock: 12, minStock: 5 },
+      { sku: "KOP-001", name: "Espresso Single", category: "Minuman Kopi", price: 15000, costPrice: 6000, stock: 4, minStock: 10 },
+      { sku: "KOP-002", name: "Kopi Susu Gula Aren", category: "Minuman Kopi", price: 18000, costPrice: 8000, stock: 50, minStock: 15 },
+      { sku: "KOP-003", name: "Cafe Latte", category: "Minuman Kopi", price: 22000, costPrice: 10000, stock: 35, minStock: 10 },
+      { sku: "NKO-001", name: "Matcha Latte Ice", category: "Minuman Non-Kopi", price: 20000, costPrice: 9000, stock: 18, minStock: 5 },
+      { sku: "NKO-002", name: "Ice Red Velvet", category: "Minuman Non-Kopi", price: 20000, costPrice: 9000, stock: 3, minStock: 8 },
+      { sku: "CAM-001", name: "Croissant Cokelat", category: "Camilan", price: 18000, costPrice: 11000, stock: 2, minStock: 5 },
+      { sku: "CAM-002", name: "French Fries", category: "Camilan", price: 15000, costPrice: 7000, stock: 15, minStock: 5 }
+    ];
+
+    listToExport.forEach(p => {
       const row = [
         p.sku,
         `"${p.name.replace(/"/g, '""')}"`,
@@ -327,13 +349,242 @@ export default function InventoryManager({
       csvContent += row + "\n";
     });
 
-    const encodedUri = encodeURI(csvContent);
+    // Create blob with UTF-8 BOM so Excel opens it with proper encoding
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", url);
     link.setAttribute("download", `Data_Produk_Inventaris_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportProductCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        let text = event.target?.result as string;
+        // Strip BOM if present
+        if (text.startsWith('\uFEFF')) {
+          text = text.substring(1);
+        }
+        const lines = text.split(/\r?\n/);
+        if (lines.length < 2) {
+          showToast("File CSV kosong atau tidak valid!", "warning");
+          return;
+        }
+
+        const errorsList: { row: number; sku: string; name: string; errors: string[] }[] = [];
+        const validList: any[] = [];
+        let totalRowsParsed = 0;
+
+        let startLineIndex = 1;
+        if (lines[0] && lines[0].trim().toLowerCase().startsWith('sep=')) {
+          startLineIndex = 2; // Line 0 is sep=, Line 1 is header, data starts from Line 2
+        }
+
+        for (let i = startLineIndex; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+
+          totalRowsParsed++;
+
+          // Simple CSV parser that handles double quotes
+          const values: string[] = [];
+          let currentVal = '';
+          let inQuotes = false;
+          for (let j = 0; j < line.length; j++) {
+            const char = line[j];
+            if (char === '"') {
+              inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+              values.push(currentVal.trim());
+              currentVal = '';
+            } else {
+              currentVal += char;
+            }
+          }
+          values.push(currentVal.trim());
+
+          if (values.length < 2) {
+            errorsList.push({
+              row: i + 1,
+              sku: '-',
+              name: 'Baris Rusak',
+              errors: ['Kolom tidak lengkap atau salah pemisah koma']
+            });
+            continue;
+          }
+
+          const rawSku = values[0]?.toUpperCase() || '';
+          const sku = rawSku || `PROD-${Math.floor(1000 + Math.random() * 9000)}`;
+          const name = values[1]?.replace(/^"|"$/g, '').trim() || '';
+          const category = values[2]?.trim() || categories[0]?.name || 'Umum';
+
+          const rowErrors: string[] = [];
+
+          // 1. Validate name
+          if (!name) {
+            rowErrors.push("Nama Produk tidak boleh kosong");
+          }
+
+          // 2. Validate price (Harga Jual)
+          const rawPrice = values[3];
+          let price = 0;
+          if (rawPrice === undefined || rawPrice.trim() === '') {
+            rowErrors.push("Harga Jual tidak boleh kosong");
+          } else {
+            const numPrice = Number(rawPrice.trim());
+            if (isNaN(numPrice)) {
+              rowErrors.push(`Format Harga Jual tidak valid: "${rawPrice}" (harus berupa angka)`);
+            } else if (numPrice < 0) {
+              rowErrors.push(`Harga Jual tidak boleh negatif: ${numPrice}`);
+            } else {
+              price = numPrice;
+            }
+          }
+
+          // 3. Validate cost price (Harga Jual Pokok)
+          const rawCostPrice = values[4];
+          let costPrice = 0;
+          if (rawCostPrice === undefined || rawCostPrice.trim() === '') {
+            rowErrors.push("Harga Jual Pokok tidak boleh kosong");
+          } else {
+            const numCostPrice = Number(rawCostPrice.trim());
+            if (isNaN(numCostPrice)) {
+              rowErrors.push(`Format Harga Jual Pokok tidak valid: "${rawCostPrice}" (harus berupa angka)`);
+            } else if (numCostPrice < 0) {
+              rowErrors.push(`Harga Jual Pokok tidak boleh negatif: ${numCostPrice}`);
+            } else {
+              costPrice = numCostPrice;
+            }
+          }
+
+          // 4. Validate stock (Stok Saat Ini)
+          const rawStock = values[5];
+          let stock = 0;
+          if (rawStock === undefined || rawStock.trim() === '') {
+            rowErrors.push("Stok Saat Ini tidak boleh kosong");
+          } else {
+            const numStock = Number(rawStock.trim());
+            if (isNaN(numStock)) {
+              rowErrors.push(`Format Stok Saat Ini tidak valid: "${rawStock}" (harus berupa angka)`);
+            } else if (!Number.isInteger(numStock)) {
+              rowErrors.push(`Stok Saat Ini harus berupa angka bulat: ${numStock}`);
+            } else if (numStock < 0) {
+              rowErrors.push(`Stok Saat Ini tidak boleh negatif: ${numStock}`);
+            } else {
+              stock = numStock;
+            }
+          }
+
+          // 5. Validate min stock (Batas Minimum Stok)
+          const rawMinStock = values[6];
+          let minStock = 5;
+          if (rawMinStock === undefined || rawMinStock.trim() === '') {
+            minStock = 5;
+          } else {
+            const numMinStock = Number(rawMinStock.trim());
+            if (isNaN(numMinStock)) {
+              rowErrors.push(`Format Batas Minimum Stok tidak valid: "${rawMinStock}" (harus berupa angka)`);
+            } else if (!Number.isInteger(numMinStock)) {
+              rowErrors.push(`Batas Minimum Stok harus berupa angka bulat: ${numMinStock}`);
+            } else if (numMinStock < 0) {
+              rowErrors.push(`Batas Minimum Stok tidak boleh negatif: ${numMinStock}`);
+            } else {
+              minStock = numMinStock;
+            }
+          }
+
+          if (rowErrors.length > 0) {
+            errorsList.push({
+              row: i + 1,
+              sku,
+              name: name || `Baris ${i + 1}`,
+              errors: rowErrors
+            });
+          } else {
+            validList.push({
+              sku,
+              name,
+              category,
+              price,
+              costPrice,
+              stock,
+              minStock
+            });
+          }
+        }
+
+        setImportReport({
+          totalRows: totalRowsParsed,
+          errors: errorsList,
+          validProducts: validList
+        });
+        setShowImportReportModal(true);
+      } catch (err) {
+        console.error(err);
+        showToast("Gagal memproses file CSV. Pastikan format sesuai template.", "warning");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleConfirmImport = () => {
+    if (!importReport) return;
+    
+    let addedCount = 0;
+    let updatedCount = 0;
+
+    importReport.validProducts.forEach(item => {
+      // Check if SKU already exists
+      const existing = products.find(p => p.sku.toUpperCase() === item.sku.toUpperCase());
+      if (existing) {
+        onUpdateProduct({
+          ...existing,
+          name: item.name,
+          category: item.category,
+          price: item.price,
+          costPrice: item.costPrice,
+          stock: item.stock,
+          minStock: item.minStock
+        });
+        updatedCount++;
+      } else {
+        onAddProduct({
+          sku: item.sku,
+          name: item.name,
+          category: item.category,
+          price: item.price,
+          costPrice: item.costPrice,
+          stock: item.stock,
+          minStock: item.minStock,
+          imageUrl: '',
+          tier1Name: 'Eceran',
+          tier1Price: item.price,
+          tier2Name: 'Renceng',
+          tier2Price: 0,
+          tier3Name: 'Pak',
+          tier3Price: 0,
+          tier4Name: 'Dus',
+          tier4Price: 0,
+          tier5Name: 'Grosir',
+          tier5Price: 0
+        });
+        addedCount++;
+      }
+    });
+
+    showToast(`Berhasil mengimport data: ${addedCount} produk baru ditambahkan, ${updatedCount} produk diperbarui!`, "success");
+    setShowImportReportModal(false);
+    setImportReport(null);
   };
 
   const handleRestoreFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -428,7 +679,7 @@ export default function InventoryManager({
             onClick={onBackupLocal}
             className="p-4 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-3 transition-colors cursor-pointer"
           >
-            <Download size={18} className="text-[#78c953]" />
+            <Download size={18} className="text-[#ef4444]" />
             <div className="text-left">
               <span className="font-bold block text-slate-800 dark:text-slate-100">Simpan Cadangan (.json)</span>
               <span className="text-[9px] text-slate-400 dark:text-slate-500 font-normal">Ekspor semua produk, kategori, dan riwayat</span>
@@ -501,10 +752,27 @@ export default function InventoryManager({
             <button
               onClick={handleExportProductCSV}
               className="p-2 px-3 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 bg-white dark:bg-slate-900"
+              title="Unduh format template CSV/Excel"
             >
               <FileSpreadsheet size={14} />
               Template Excel
             </button>
+
+            <button
+              onClick={() => csvInputRef.current?.click()}
+              className="p-2 px-3 border border-slate-200 dark:border-slate-800 hover:bg-[#ef4444]/10 hover:text-[#ef4444] hover:border-[#ef4444]/30 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 bg-white dark:bg-slate-900"
+              title="Unggah file CSV produk untuk import massal"
+            >
+              <Upload size={14} />
+              Import CSV
+            </button>
+            <input
+              type="file"
+              ref={csvInputRef}
+              onChange={handleImportProductCSV}
+              accept=".csv"
+              className="hidden"
+            />
             
             <button
               onClick={handleOpenAddForm}
@@ -1016,9 +1284,9 @@ export default function InventoryManager({
                               setIsUploadingDrive(false);
                             }
                           }}
-                          className="p-1.5 px-3 bg-[#78c953]/10 hover:bg-[#78c953]/20 text-emerald-800 dark:text-emerald-300 border border-[#78c953]/15 font-bold rounded-lg text-[10px] cursor-pointer transition-colors flex items-center gap-1 shrink-0"
+                          className="p-1.5 px-3 bg-[#ef4444]/10 hover:bg-[#ef4444]/20 text-emerald-800 dark:text-emerald-300 border border-[#ef4444]/15 font-bold rounded-lg text-[10px] cursor-pointer transition-colors flex items-center gap-1 shrink-0"
                         >
-                          <Sparkles size={11} className="text-[#78c953] animate-pulse" />
+                          <Sparkles size={11} className="text-[#ef4444] animate-pulse" />
                           {isUploadingDrive ? "Mengunggah..." : "Unggah ke Google Drive"}
                         </button>
                       )}
@@ -1026,7 +1294,7 @@ export default function InventoryManager({
                     
                     <p className="text-[9px] text-slate-400 dark:text-slate-500 font-medium">
                       {isUploadingDrive ? (
-                        <span className="text-[#78c953] font-bold">{uploadStatus}</span>
+                        <span className="text-[#ef4444] font-bold">{uploadStatus}</span>
                       ) : uploadStatus ? (
                         <span className="text-emerald-600 dark:text-emerald-400 font-bold">{uploadStatus}</span>
                       ) : imageUrl && imageUrl.startsWith('data:image/') ? (
@@ -1064,6 +1332,142 @@ export default function InventoryManager({
           </div>
         </div>
       )}
+
+      {/* Import CSV Validation Modal */}
+      <AnimatePresence>
+        {showImportReportModal && importReport && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]"
+            >
+              <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950/20 shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className={`p-2 rounded-xl ${importReport.errors.length > 0 ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600' : 'bg-emerald-50 dark:bg-emerald-950/40 text-[#ef4444]'}`}>
+                    <FileSpreadsheet size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">Laporan Validasi Import CSV</h3>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-505 font-semibold">
+                      Dievaluasi: {importReport.totalRows} baris data produk
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowImportReportModal(false);
+                    setImportReport(null);
+                  }}
+                  className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="p-5 overflow-y-auto space-y-4 flex-1">
+                {/* Error Summary Alert */}
+                {importReport.errors.length > 0 ? (
+                  <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl flex gap-3">
+                    <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={18} />
+                    <div className="text-xs">
+                      <h4 className="font-extrabold text-amber-800 dark:text-amber-400">Ditemukan kesalahan format data!</h4>
+                      <p className="text-slate-600 dark:text-slate-300 mt-1">
+                        Ada <strong>{importReport.errors.length}</strong> baris yang tidak memenuhi standar validasi (nama kosong, format harga salah, atau stok negatif).
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3.5 bg-[#ef4444]/10 border border-[#ef4444]/20 rounded-xl flex gap-3">
+                    <Check className="text-[#ef4444] shrink-0 mt-0.5" size={18} />
+                    <div className="text-xs">
+                      <h4 className="font-extrabold text-emerald-800 dark:text-emerald-400">Seluruh data valid! 🎉</h4>
+                      <p className="text-slate-600 dark:text-slate-300 mt-1">
+                        Sebanyak <strong>{importReport.validProducts.length}</strong> produk siap diimport secara massal tanpa kendala format.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Grid Details */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-slate-50 dark:bg-slate-950/30 rounded-xl border border-slate-100 dark:border-slate-800 text-center">
+                    <div className="text-lg font-black text-[#ef4444]">
+                      {importReport.validProducts.length}
+                    </div>
+                    <div className="text-[10px] uppercase font-black text-slate-400 tracking-wider">
+                      Siap Diimport / Update
+                    </div>
+                  </div>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-950/30 rounded-xl border border-slate-100 dark:border-slate-800 text-center">
+                    <div className={`text-lg font-black ${importReport.errors.length > 0 ? 'text-amber-500' : 'text-slate-400'}`}>
+                      {importReport.errors.length}
+                    </div>
+                    <div className="text-[10px] uppercase font-black text-slate-400 tracking-wider">
+                      Gagal Validasi (Dilewati)
+                    </div>
+                  </div>
+                </div>
+
+                {/* Errors List */}
+                {importReport.errors.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-[11px] font-black uppercase text-slate-400 tracking-wide">
+                      Rincian Baris yang Bermasalah
+                    </h4>
+                    <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-200 dark:divide-slate-800">
+                      {importReport.errors.map((err, idx) => (
+                        <div key={idx} className="p-3 bg-slate-50/50 dark:bg-slate-950/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                          <div className="w-full">
+                            <div className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
+                              <span className="p-0.5 px-1.5 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-md text-[10px]">
+                                Baris {err.row}
+                              </span>
+                              <span>{err.name}</span>
+                              {err.sku && err.sku !== '-' && (
+                                <span className="text-[10px] font-mono text-slate-400">({err.sku})</span>
+                              )}
+                            </div>
+                            <ul className="list-disc pl-5 mt-1 text-[11px] text-red-500 font-medium space-y-0.5">
+                              {err.errors.map((e, eIdx) => (
+                                <li key={eIdx}>{e}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/20 shrink-0 flex flex-col sm:flex-row justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowImportReportModal(false);
+                    setImportReport(null);
+                  }}
+                  className="p-2 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 font-bold rounded-lg text-xs cursor-pointer transition-colors border dark:border-slate-700"
+                >
+                  Batal / Perbaiki File
+                </button>
+                {importReport.validProducts.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleConfirmImport}
+                    className="p-2 px-5 bg-[#ef4444] hover:bg-[#dc2626] text-white font-bold rounded-lg text-xs cursor-pointer transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <Check size={14} />
+                    Import {importReport.validProducts.length} Produk Valid
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

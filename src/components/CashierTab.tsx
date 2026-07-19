@@ -25,6 +25,7 @@ interface CashierTabProps {
   storeSettings: StoreSettings;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
+  onLogActivity?: (action: string, details: string) => void;
 }
 
 export default function CashierTab({
@@ -35,7 +36,8 @@ export default function CashierTab({
   onCheckoutSuccess,
   storeSettings,
   isFullscreen = false,
-  onToggleFullscreen
+  onToggleFullscreen,
+  onLogActivity
 }: CashierTabProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -151,6 +153,8 @@ export default function CashierTab({
 
   // --- Barcode Scanner States ---
   const [isScannerActive, setIsScannerActive] = useState(false);
+  const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>('');
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const lastScannedRef = useRef<{ text: string; time: number }>({ text: '', time: 0 });
 
@@ -160,6 +164,27 @@ export default function CashierTab({
     let isActive = true;
 
     if (isScannerActive) {
+      // Fetch available cameras first
+      Html5Qrcode.getCameras()
+        .then(devices => {
+          if (devices && devices.length > 0 && isActive) {
+            setCameras(devices);
+            if (!selectedCameraId) {
+              // Prefer back/rear/environment cameras by searching labels
+              const backCamera = devices.find(d => 
+                d.label.toLowerCase().includes('back') || 
+                d.label.toLowerCase().includes('rear') || 
+                d.label.toLowerCase().includes('environment') ||
+                d.label.toLowerCase().includes('belakang')
+              );
+              setSelectedCameraId(backCamera ? backCamera.id : devices[0].id);
+            }
+          }
+        })
+        .catch(err => {
+          console.warn("Gagal mengambil daftar kamera:", err);
+        });
+
       const timer = setTimeout(() => {
         if (!isActive) return;
         try {
@@ -167,12 +192,15 @@ export default function CashierTab({
           scannerRef.current = html5QrCode;
 
           const config = { 
-            fps: 10, 
-            qrbox: { width: 250, height: 160 } 
+            fps: 15, 
+            qrbox: { width: 260, height: 180 } 
           };
 
+          // Use selected camera device ID if available, otherwise fallback to standard environment
+          const cameraSource = selectedCameraId ? { deviceId: { exact: selectedCameraId } } : { facingMode: "environment" };
+
           html5QrCode.start(
-            { facingMode: "environment" },
+            cameraSource,
             config,
             (decodedText) => {
               handleBarcodeScanned(decodedText);
@@ -182,8 +210,24 @@ export default function CashierTab({
             }
           ).catch(err => {
             console.error("Gagal memulai scanner kamera:", err);
-            showToast("Kamera tidak dapat diakses atau diblokir izinnya.", "warning");
-            setIsScannerActive(false);
+            // Fallback retry using standard environment if specific camera failed
+            if (selectedCameraId && html5QrCode) {
+              html5QrCode.start(
+                { facingMode: "environment" },
+                config,
+                (decodedText) => {
+                  handleBarcodeScanned(decodedText);
+                },
+                () => {}
+              ).catch(e2 => {
+                console.error("Fallback start failed:", e2);
+                showToast("Kamera tidak dapat diakses atau diblokir izinnya.", "warning");
+                setIsScannerActive(false);
+              });
+            } else {
+              showToast("Kamera tidak dapat diakses atau diblokir izinnya.", "warning");
+              setIsScannerActive(false);
+            }
           });
         } catch (e) {
           console.error("Scanner init exception:", e);
@@ -208,7 +252,7 @@ export default function CashierTab({
         scannerRef.current = null;
       }
     }
-  }, [isScannerActive]);
+  }, [isScannerActive, selectedCameraId]);
 
   const playBeepSound = (type: 'add' | 'error' | 'success') => {
     try {
@@ -522,6 +566,8 @@ export default function CashierTab({
     setHeldCarts(updated);
     localStorage.setItem('kp_held_carts', JSON.stringify(updated));
 
+    onLogActivity?.('Hold Transaksi', `Menyimpan sementara transaksi "${newHeld.label}" dengan ${cartItems.length} barang belanjaan.`);
+
     // Clear current POS active states
     setCartItems([]);
     setSelectedCustomer(null);
@@ -550,6 +596,8 @@ export default function CashierTab({
     setHeldCarts(updated);
     localStorage.setItem('kp_held_carts', JSON.stringify(updated));
 
+    onLogActivity?.('Muat Pending', `Memuat kembali pending transaksi "${target.label}" dengan ${target.cartItems.length} barang.`);
+
     setIsHeldListOpen(false);
     showToast(`Memuat kembali transaksi "${target.label}"!`, 'success');
     playBeepSound('add');
@@ -561,6 +609,7 @@ export default function CashierTab({
       const updated = heldCarts.filter(h => h.id !== heldId);
       setHeldCarts(updated);
       localStorage.setItem('kp_held_carts', JSON.stringify(updated));
+      onLogActivity?.('Hapus Pending', `Menghapus pending transaksi "${label}" secara permanen.`);
       showToast(`Transaksi pending "${label}" telah dihapus.`, 'warning');
     }
   };
@@ -725,7 +774,7 @@ export default function CashierTab({
               className="p-2 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
               title="Buka Tampilan Pelanggan di Jendela Terpisah (Sangat bagus untuk monitor sekunder)"
             >
-              <Monitor size={14} className="text-[#78c953]" />
+              <Monitor size={14} className="text-[#ef4444]" />
               <span className="hidden sm:inline font-sans">Display Pelanggan</span>
               <ExternalLink size={10} className="opacity-60" />
             </button>
@@ -763,7 +812,7 @@ export default function CashierTab({
           <div className="flex gap-2 overflow-x-auto pb-1 shrink-0 select-none">
             <button
               onClick={() => setSelectedCategory('all')}
-              className={`p-1.5 px-4 text-xs font-semibold rounded-xl cursor-pointer transition-all flex items-center gap-1.5 whitespace-nowrap ${selectedCategory === 'all' ? 'bg-[#78c953] text-white shadow-xs' : 'bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+              className={`p-1.5 px-4 text-xs font-semibold rounded-xl cursor-pointer transition-all flex items-center gap-1.5 whitespace-nowrap ${selectedCategory === 'all' ? 'bg-[#ef4444] text-white shadow-xs' : 'bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
             >
               ⭐ Semua
             </button>
@@ -771,7 +820,7 @@ export default function CashierTab({
               <button
                 key={c.id}
                 onClick={() => setSelectedCategory(c.name)}
-                className={`p-1.5 px-4 text-xs font-semibold rounded-xl cursor-pointer transition-all flex items-center gap-1.5 whitespace-nowrap ${selectedCategory === c.name ? 'bg-[#78c953] text-white shadow-xs' : 'bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                className={`p-1.5 px-4 text-xs font-semibold rounded-xl cursor-pointer transition-all flex items-center gap-1.5 whitespace-nowrap ${selectedCategory === c.name ? 'bg-[#ef4444] text-white shadow-xs' : 'bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
               >
                 {getCategoryIcon(c.icon)}
                 {c.name}
@@ -790,6 +839,24 @@ export default function CashierTab({
               className="overflow-hidden bg-slate-900 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl relative shrink-0"
             >
               <div className="p-4 flex flex-col items-center">
+                {/* Dynamic Camera Selector for multi-lens devices */}
+                {cameras.length > 1 && (
+                  <div className="w-full max-w-md mb-3 flex items-center gap-2 bg-slate-800 p-2 rounded-xl border border-slate-700">
+                    <span className="text-[10px] text-slate-300 font-bold uppercase shrink-0">Pilih Sensor Kamera:</span>
+                    <select
+                      value={selectedCameraId}
+                      onChange={(e) => setSelectedCameraId(e.target.value)}
+                      className="flex-1 bg-slate-900 text-white text-xs p-1 border border-slate-700 rounded-lg outline-hidden cursor-pointer font-semibold"
+                    >
+                      {cameras.map(cam => (
+                        <option key={cam.id} value={cam.id}>
+                          {cam.label || `Kamera ${cam.id.substring(0, 5)}...`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div className="w-full max-w-md bg-black rounded-xl overflow-hidden relative border border-slate-800 shadow-inner">
                   {/* Camera Target Scan Area */}
                   <div id="qr-reader" className="w-full h-48 sm:h-64 [&_video]:w-full [&_video]:h-full [&_video]:object-cover" />
@@ -797,16 +864,16 @@ export default function CashierTab({
                   {/* Custom Scanner Frame HUD Overlay */}
                   <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-4 z-10">
                     <div className="flex justify-between w-full">
-                      <div className="border-t-2 border-l-2 border-[#78c953] w-6 h-6 rounded-tl-sm"></div>
-                      <div className="border-t-2 border-r-2 border-[#78c953] w-6 h-6 rounded-tr-sm"></div>
+                      <div className="border-t-2 border-l-2 border-[#ef4444] w-6 h-6 rounded-tl-sm"></div>
+                      <div className="border-t-2 border-r-2 border-[#ef4444] w-6 h-6 rounded-tr-sm"></div>
                     </div>
                     
                     {/* Pulsing Laser Barcode Line */}
-                    <div className="w-[calc(100%-24px)] h-0.5 bg-[#78c953] opacity-80 animate-pulse self-center my-auto shadow-[0_0_8px_#78c953]"></div>
+                    <div className="w-[calc(100%-24px)] h-0.5 bg-[#ef4444] opacity-80 animate-pulse self-center my-auto shadow-[0_0_8px_#ef4444]"></div>
                     
                     <div className="flex justify-between w-full">
-                      <div className="border-b-2 border-l-2 border-[#78c953] w-6 h-6 rounded-bl-sm"></div>
-                      <div className="border-b-2 border-r-2 border-[#78c953] w-6 h-6 rounded-br-sm"></div>
+                      <div className="border-b-2 border-l-2 border-[#ef4444] w-6 h-6 rounded-bl-sm"></div>
+                      <div className="border-b-2 border-r-2 border-[#ef4444] w-6 h-6 rounded-br-sm"></div>
                     </div>
                   </div>
                 </div>
@@ -839,7 +906,7 @@ export default function CashierTab({
                   isOutOfStock 
                     ? 'opacity-65 cursor-not-allowed border-slate-100 dark:border-slate-850 bg-slate-50 dark:bg-slate-950/20' 
                     : p.id === clickedProductId
-                      ? 'border-[#78c953] ring-2 ring-[#78c953]/30 bg-emerald-50/10 scale-95 shadow-md'
+                      ? 'border-[#ef4444] ring-2 ring-[#ef4444]/30 bg-emerald-50/10 scale-95 shadow-md'
                       : 'border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700 hover:shadow-xs active:scale-98'
                 }`}
               >
@@ -850,9 +917,9 @@ export default function CashierTab({
                       initial={{ opacity: 0, scale: 0.7 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0 }}
-                      className="absolute inset-0 bg-[#78c953]/15 flex items-center justify-center backdrop-blur-[1px] z-20 pointer-events-none"
+                      className="absolute inset-0 bg-[#ef4444]/15 flex items-center justify-center backdrop-blur-[1px] z-20 pointer-events-none"
                     >
-                      <span className="bg-[#78c953] text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1 scale-105">
+                      <span className="bg-[#ef4444] text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1 scale-105">
                         <Check size={12} className="stroke-[3]" />
                         +1 Keranjang
                       </span>
@@ -1010,7 +1077,7 @@ export default function CashierTab({
           <div className="bg-slate-50 dark:bg-slate-950/45 border border-slate-100 dark:border-slate-850 rounded-xl p-2.5 space-y-2 text-xs">
             <div className="flex justify-between items-center">
               <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                <Users size={13} className="text-[#78c953]" /> Pelanggan / Member:
+                <Users size={13} className="text-[#ef4444]" /> Pelanggan / Member:
               </span>
               {selectedCustomer && (
                 <button
@@ -1184,7 +1251,7 @@ export default function CashierTab({
           {/* Points Redemption block */}
           {cartItems.length > 0 && selectedCustomer && selectedCustomer.points > 0 && (
             <div className="space-y-1.5 p-2.5 bg-emerald-50/40 dark:bg-slate-950/20 border border-emerald-150/40 dark:border-slate-800 rounded-xl">
-              <span className="text-[10px] uppercase font-black tracking-wider text-emerald-800 dark:text-[#78c953] flex items-center gap-1">
+              <span className="text-[10px] uppercase font-black tracking-wider text-emerald-800 dark:text-[#ef4444] flex items-center gap-1">
                 ⭐ Tukar Poin (Tersedia: {selectedCustomer.points} Pts)
               </span>
               <div className="flex gap-2 items-center text-xs">
@@ -1322,7 +1389,7 @@ export default function CashierTab({
                           {/* Exact Cash button */}
                           <button
                             onClick={() => setCashAmount(calculations.total.toString())}
-                            className="p-1 px-2.5 bg-[#78c953]/15 hover:bg-[#78c953]/25 text-emerald-800 text-[10px] rounded-lg font-bold border border-[#78c953]/20 transition-colors cursor-pointer"
+                            className="p-1 px-2.5 bg-[#ef4444]/15 hover:bg-[#ef4444]/25 text-emerald-800 text-[10px] rounded-lg font-bold border border-[#ef4444]/20 transition-colors cursor-pointer"
                           >
                             Tepat Pas
                           </button>
@@ -1429,7 +1496,7 @@ export default function CashierTab({
                   <button
                     onClick={handleFinalPayment}
                     disabled={paymentMethod === 'qris' && qrisState === 'waiting'}
-                    className="flex-1 p-2.5 bg-[#78c953] hover:bg-[#68b544] disabled:bg-slate-300 text-white font-bold rounded-xl text-xs cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-emerald-100 transition-all"
+                    className="flex-1 p-2.5 bg-[#ef4444] hover:bg-[#dc2626] disabled:bg-slate-300 text-white font-bold rounded-xl text-xs cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-red-100 transition-all"
                   >
                     <ShieldCheck size={14} />
                     Konfirmasi Bayar Selesai
@@ -1554,7 +1621,7 @@ export default function CashierTab({
                         </button>
                         <button
                           onClick={() => handleRecallCart(held.id)}
-                          className="p-1 px-3 bg-[#78c953] hover:bg-[#68b544] text-white rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
+                          className="p-1 px-3 bg-[#ef4444] hover:bg-[#dc2626] text-white rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
                         >
                           Muat Ulang
                         </button>
@@ -1588,7 +1655,7 @@ export default function CashierTab({
                 cartElement.scrollIntoView({ behavior: 'smooth' });
               }
             }}
-            className="w-full p-4 bg-[#78c953] hover:bg-[#68b544] text-white font-bold rounded-2xl shadow-xl flex items-center justify-between transition-all active:scale-98 cursor-pointer border border-white/20"
+            className="w-full p-4 bg-[#ef4444] hover:bg-[#dc2626] text-white font-bold rounded-2xl shadow-xl flex items-center justify-between transition-all active:scale-98 cursor-pointer border border-white/20"
           >
             <div className="flex items-center gap-2.5">
               <div className="relative p-1.5 bg-white/20 rounded-xl shrink-0">

@@ -7,12 +7,13 @@ import React, { useState, useEffect } from 'react';
 import { 
   LogOut, UserCheck, Shield, ShoppingBag, BarChart3, Database, 
   AlertTriangle, CheckCircle, Lock, PlusCircle, Sparkles, Eye, EyeOff,
-  History, Settings, Store, Receipt, X, User as UserIcon, Moon, Sun, Users, Truck
+  History, Settings, Store, Receipt, X, User as UserIcon, Moon, Sun, Users, Truck,
+  ClipboardList, CreditCard, Layers, TrendingUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // Types & Initial seeds
-import { Product, Category, Transaction, User, SyncConfig, StoreSettings, INITIAL_CATEGORIES, INITIAL_PRODUCTS, INITIAL_TRANSACTIONS, Customer, INITIAL_CUSTOMERS, Supplier, Purchase, PurchaseReturn, INITIAL_SUPPLIERS } from './types';
+import { Product, Category, Transaction, User, SyncConfig, StoreSettings, INITIAL_CATEGORIES, INITIAL_PRODUCTS, INITIAL_TRANSACTIONS, Customer, INITIAL_CUSTOMERS, Supplier, Purchase, PurchaseReturn, INITIAL_SUPPLIERS, SalesReturn, ActivityLog, BrilinkTransaction, PpobTransaction, CashSession } from './types';
 
 // Services
 import { syncToGoogleSheets, pullFromGoogleSheets } from './utils/syncService';
@@ -28,6 +29,10 @@ import SettingsTab from './components/SettingsTab';
 import CustomerDisplay from './components/CustomerDisplay';
 import CustomerManager from './components/CustomerManager';
 import PurchaseManager from './components/PurchaseManager';
+import LogsAndReturns from './components/LogsAndReturns';
+import BrilinkTab from './components/BrilinkTab';
+import PpobTab from './components/PpobTab';
+import FinanceReportTab from './components/FinanceReportTab';
 
 export default function App() {
   // --- core PERSISTENCE states ---
@@ -78,17 +83,236 @@ export default function App() {
       address: "Jl. Sudirman No. 45, Jakarta",
       phone: "0812-3456-7890",
       isTaxEnabled: true,
-      taxPercentage: 11
+      taxPercentage: 11,
+      promos: [
+        { title: "Kopi Terbaik Untuk Hari Anda", text: "Dibuat langsung dari biji kopi pilihan nusantara beraroma tinggi." },
+        { title: "Diskon 10% Untuk Pelanggan Setia", text: "Dapatkan promo menarik di hari ulang tahun Anda dengan menunjukkan kartu identitas." },
+        { title: "Cobain Cemilan Baru Kami!", text: "Padukan kopi hangat Anda dengan Croissant gurih yang dipanggang segar setiap pagi." },
+        { title: "Bayar Praktis via QRIS", text: "Mendukung semua pembayaran e-wallet dan mobile banking kesayangan Anda." }
+      ]
     };
   });
 
   // --- UI states ---
-  const [activeTab, setActiveTab] = useState<'cashier' | 'dashboard' | 'inventory' | 'history' | 'settings' | 'customers' | 'pembelian'>('cashier');
+  const [activeTab, setActiveTab] = useState<'cashier' | 'dashboard' | 'inventory' | 'history' | 'settings' | 'customers' | 'pembelian' | 'logs' | 'brilink' | 'ppob' | 'finance_reports'>('cashier');
   const [selectedTxForReceipt, setSelectedTxForReceipt] = useState<Transaction | null>(null);
   const [isSyncGuideOpen, setIsSyncGuideOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isPosFullscreen, setIsPosFullscreen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // --- Advanced Transaction & Audit Log States ---
+  const [salesReturns, setSalesReturns] = useState<SalesReturn[]>(() => {
+    const saved = localStorage.getItem('kp_sales_returns');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(() => {
+    const saved = localStorage.getItem('kp_activity_logs');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  const logActivity = (action: string, details: string) => {
+    const newLog: ActivityLog = {
+      id: `log-${Math.random().toString(36).substr(2, 9)}`,
+      userId: currentUser?.id || 'unknown',
+      username: currentUser?.name || 'Sistem',
+      action,
+      details,
+      timestamp: new Date().toISOString()
+    };
+    setActivityLogs(prev => {
+      const updated = [newLog, ...prev];
+      localStorage.setItem('kp_activity_logs', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  // --- BRILink, PPOB & Rekap Kas States ---
+  const [brilinkTransactions, setBrilinkTransactions] = useState<BrilinkTransaction[]>(() => {
+    const saved = localStorage.getItem('kp_brilink_txs');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  const [ppobTransactions, setPpobTransactions] = useState<PpobTransaction[]>(() => {
+    const saved = localStorage.getItem('kp_ppob_txs');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  const [cashSessions, setCashSessions] = useState<CashSession[]>(() => {
+    const saved = localStorage.getItem('kp_cash_sessions');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  const [currentCashSession, setCurrentCashSession] = useState<CashSession | null>(() => {
+    const saved = localStorage.getItem('kp_current_cash_session');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed) return parsed;
+      } catch (e) {}
+    }
+    return null;
+  });
+
+  const handleAddBrilinkTransaction = (tx: BrilinkTransaction) => {
+    setBrilinkTransactions(prev => {
+      const updated = [tx, ...prev];
+      localStorage.setItem('kp_brilink_txs', JSON.stringify(updated));
+      return updated;
+    });
+    logActivity('Simpan BRILink', `${tx.transactionType.toUpperCase()} - ${tx.bankName} ke Rek ${tx.accountNumber} an ${tx.recipientName} senilai Rp ${tx.amount.toLocaleString('id-ID')}`);
+  };
+
+  const handleDeleteBrilinkTransaction = (id: string) => {
+    setBrilinkTransactions(prev => {
+      const tx = prev.find(t => t.id === id);
+      const updated = prev.filter(t => t.id !== id);
+      localStorage.setItem('kp_brilink_txs', JSON.stringify(updated));
+      if (tx) {
+        logActivity('Hapus BRILink', `Menghapus transaksi BRILink ${tx.refNumber}`);
+      }
+      return updated;
+    });
+  };
+
+  const handleAddPpobTransaction = (tx: PpobTransaction) => {
+    setPpobTransactions(prev => {
+      const updated = [tx, ...prev];
+      localStorage.setItem('kp_ppob_txs', JSON.stringify(updated));
+      return updated;
+    });
+    logActivity('Simpan PPOB', `${tx.ppobType.toUpperCase()} - ${tx.providerName} ke ID ${tx.customerNumber} senilai Rp ${tx.amount.toLocaleString('id-ID')}`);
+  };
+
+  const handleDeletePpobTransaction = (id: string) => {
+    setPpobTransactions(prev => {
+      const tx = prev.find(t => t.id === id);
+      const updated = prev.filter(t => t.id !== id);
+      localStorage.setItem('kp_ppob_txs', JSON.stringify(updated));
+      if (tx) {
+        logActivity('Hapus PPOB', `Menghapus transaksi PPOB ${tx.id.toUpperCase()}`);
+      }
+      return updated;
+    });
+  };
+
+  const handleOpenCashSession = (initialCash: number) => {
+    const newSession: CashSession = {
+      id: `session-${Math.random().toString(36).substring(2, 9)}`,
+      date: new Date().toISOString().slice(0, 10),
+      startTime: new Date().toISOString(),
+      openedById: currentUser?.id || 'unknown',
+      openedByName: currentUser?.name || 'Sistem',
+      initialCash,
+      salesCashTotal: 0,
+      brilinkCashIn: 0,
+      brilinkCashOut: 0,
+      ppobCashTotal: 0,
+      nonCashTotal: 0,
+      expectedCash: initialCash,
+      status: 'open'
+    };
+    setCurrentCashSession(newSession);
+    localStorage.setItem('kp_current_cash_session', JSON.stringify(newSession));
+    logActivity('Buka Rekap Kas', `Membuka sesi kasir baru dengan modal awal Rp ${initialCash.toLocaleString('id-ID')}`);
+  };
+
+  const handleCloseCashSession = (actualCash: number, notes: string) => {
+    if (!currentCashSession) return;
+    
+    const start = new Date(currentCashSession.startTime).getTime();
+    const sessionTxs = transactions.filter(t => new Date(t.date).getTime() >= start);
+    let salesCash = 0;
+    let nonCash = 0;
+    sessionTxs.forEach(tx => {
+      if (tx.paymentMethod === 'cash') salesCash += tx.total;
+      else nonCash += tx.total;
+    });
+
+    const sessionBrilinks = brilinkTransactions.filter(t => new Date(t.date).getTime() >= start);
+    let bIn = 0;
+    let bOut = 0;
+    sessionBrilinks.forEach(tx => {
+      if (tx.paymentMethod === 'cash') {
+        if (tx.transactionType === 'tarik_tunai') {
+          bOut += (tx.amount - tx.adminFee);
+        } else {
+          bIn += (tx.amount + tx.adminFee);
+        }
+      }
+    });
+
+    const sessionPpobs = ppobTransactions.filter(t => new Date(t.date).getTime() >= start);
+    let ppobCash = 0;
+    sessionPpobs.forEach(tx => {
+      if (tx.paymentMethod === 'cash') {
+        ppobCash += tx.totalAmount;
+      }
+    });
+
+    const expected = currentCashSession.initialCash + salesCash + bIn - bOut + ppobCash;
+    const difference = actualCash - expected;
+
+    const closedSession: CashSession = {
+      ...currentCashSession,
+      endTime: new Date().toISOString(),
+      closedById: currentUser?.id,
+      closedByName: currentUser?.name,
+      salesCashTotal: salesCash,
+      brilinkCashIn: bIn,
+      brilinkCashOut: bOut,
+      ppobCashTotal: ppobCash,
+      nonCashTotal: nonCash,
+      expectedCash: expected,
+      actualCash,
+      difference,
+      status: 'closed',
+      notes: notes || undefined
+    };
+
+    setCashSessions(prev => {
+      const updated = [closedSession, ...prev];
+      localStorage.setItem('kp_cash_sessions', JSON.stringify(updated));
+      return updated;
+    });
+
+    setCurrentCashSession(null);
+    localStorage.removeItem('kp_current_cash_session');
+    
+    logActivity('Tutup Rekap Kas', `Tutup rekap kas laci. Uang laci teoritis: Rp ${expected.toLocaleString('id-ID')}, Uang fisik: Rp ${actualCash.toLocaleString('id-ID')}. Selisih: Rp ${difference.toLocaleString('id-ID')}`);
+  };
 
   // --- UI Theme (Light/Dark Mode) ---
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -844,6 +1068,14 @@ export default function App() {
   };
 
   const handleUpdateProduct = (updatedProd: Product) => {
+    const oldProd = products.find(p => p.id === updatedProd.id);
+    if (oldProd && oldProd.price !== updatedProd.price) {
+      logActivity(
+        'Ubah Harga Barang',
+        `Mengubah harga "${updatedProd.name}" dari Rp ${oldProd.price.toLocaleString('id-ID')} menjadi Rp ${updatedProd.price.toLocaleString('id-ID')}`
+      );
+    }
+
     const updated = products.map(p => p.id === updatedProd.id ? updatedProd : p);
     const now = Date.now();
     lastLocalUpdate.current = now;
@@ -860,7 +1092,8 @@ export default function App() {
   };
 
   const handleDeleteProduct = (productId: string) => {
-    const prodToDelete = products.find(p => p.id === productId);
+    const prodToDelete = products.find(p => p.id !== productId); // wait, prodToDelete is searched from products filter
+    const realProd = products.find(p => p.id === productId);
     const updated = products.filter(p => p.id !== productId);
     const now = Date.now();
     lastLocalUpdate.current = now;
@@ -871,7 +1104,7 @@ export default function App() {
     } catch (e) {
       console.warn('LocalStorage limit exceeded for products, saving to server only:', e);
     }
-    triggerNotification(`Produk "${prodToDelete?.name}" telah dihapus.`, 'warning');
+    triggerNotification(`Produk "${realProd?.name || 'Barang'}" telah dihapus.`, 'warning');
     performAutoCloudBackup(updated, transactions);
     saveProductsToServer(updated);
   };
@@ -879,6 +1112,11 @@ export default function App() {
   const handleDeleteTransaction = (txId: string) => {
     const txToDelete = transactions.find(t => t.id === txId);
     if (!txToDelete) return;
+
+    logActivity(
+      'Hapus Transaksi',
+      `Menghapus transaksi invoice ${txToDelete.invoiceNumber} senilai Rp ${txToDelete.total.toLocaleString('id-ID')}`
+    );
 
     // Restore stock counts
     const updatedProducts = products.map(p => {
@@ -907,6 +1145,75 @@ export default function App() {
 
     triggerNotification(`Transaksi ${txToDelete.invoiceNumber} berhasil dihapus & stok dikembalikan!`, 'success');
     performAutoCloudBackup(updatedProducts, updatedTxs);
+  };
+
+  const handleProcessSalesReturn = (
+    txId: string,
+    returnedItems: { productId: string; qty: number; refundAmount: number; name: string }[],
+    restock: boolean,
+    notes: string
+  ) => {
+    const tx = transactions.find(t => t.id === txId);
+    if (!tx) return;
+
+    const returnNumber = `RET-SLS/${new Date().toISOString().slice(0, 10).replace(/-/g, '')}/${Math.floor(100 + Math.random() * 900)}`;
+    const returnItemObjs = returnedItems.map(item => {
+      const origItem = tx.items.find(i => i.productId === item.productId)!;
+      return {
+        productId: item.productId,
+        sku: origItem.sku,
+        name: item.name,
+        price: origItem.price,
+        qty: item.qty,
+        refundAmount: item.refundAmount
+      };
+    });
+
+    const totalRefund = returnedItems.reduce((acc, item) => acc + item.refundAmount, 0);
+
+    const newReturn: SalesReturn = {
+      id: `ret-${Math.random().toString(36).substr(2, 9)}`,
+      returnNumber,
+      transactionId: txId,
+      invoiceNumber: tx.invoiceNumber,
+      date: new Date().toISOString(),
+      items: returnItemObjs,
+      totalRefund,
+      cashierId: currentUser?.id || 'unknown',
+      cashierName: currentUser?.name || 'Sistem',
+      notes,
+      restock
+    };
+
+    const updatedReturns = [newReturn, ...salesReturns];
+    setSalesReturns(updatedReturns);
+    localStorage.setItem('kp_sales_returns', JSON.stringify(updatedReturns));
+
+    let updatedProducts = products;
+    if (restock) {
+      updatedProducts = products.map(p => {
+        const returned = returnedItems.find(item => item.productId === p.id);
+        if (returned) {
+          return {
+            ...p,
+            stock: p.stock + returned.qty
+          };
+        }
+        return p;
+      });
+      setProducts(updatedProducts);
+      localStorage.setItem('kp_products', JSON.stringify(updatedProducts));
+      saveProductsToServer(updatedProducts);
+    }
+
+    const itemDetails = returnItemObjs.map(i => `${i.name} (x${i.qty})`).join(', ');
+    logActivity(
+      'Retur Penjualan',
+      `Memproses retur dari Invoice ${tx.invoiceNumber} senilai Rp ${totalRefund.toLocaleString('id-ID')}. Item: ${itemDetails}. Alasan: ${notes || 'Tidak ada'}. ${restock ? 'Stok dikembalikan ke gudang.' : 'Stok tidak dikembalikan.'}`
+    );
+
+    triggerNotification(`Retur ${returnNumber} berhasil diproses!`, 'success');
+    performAutoCloudBackup(updatedProducts, transactions);
   };
 
   const handleCheckoutSuccess = (newTx: Product | any) => {
@@ -1071,7 +1378,36 @@ export default function App() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (syncConfig.isEnabled && syncConfig.googleSheetsUrl) {
+      setIsLoggingOut(true);
+      try {
+        const result = await syncToGoogleSheets(syncConfig.googleSheetsUrl, {
+          products,
+          categories,
+          transactions,
+          users,
+          storeSettings
+        });
+        if (result.success) {
+          const updatedConfig = {
+            ...syncConfig,
+            lastSyncedAt: new Date().toISOString()
+          };
+          setSyncConfig(updatedConfig);
+          localStorage.setItem('kp_sync_config', JSON.stringify(updatedConfig));
+          triggerNotification('Data berhasil dicadangkan otomatis ke Google Sheets!', 'success');
+        } else {
+          triggerNotification(`Gagal mencadangkan data otomatis ke Google Sheets: ${result.message}`, 'warning');
+        }
+      } catch (err: any) {
+        console.error('Logout sync error:', err);
+        triggerNotification('Gagal menghubungi Google Sheets untuk backup. Keluar dari sistem...', 'warning');
+      } finally {
+        setIsLoggingOut(false);
+      }
+    }
+
     setCurrentUser(null);
     sessionStorage.removeItem('kp_active_user');
     setSelectedTxForReceipt(null);
@@ -1140,7 +1476,7 @@ export default function App() {
             className="w-full max-w-4xl bg-white dark:bg-slate-900 rounded-[32px] shadow-2xl border border-slate-200/40 dark:border-slate-800/80 overflow-hidden flex flex-col md:flex-row min-h-[560px]"
           >
             {/* Left Welcome Panel (Green Brand Gradient matching Dashboard) */}
-            <div className="w-full md:w-[45%] bg-gradient-to-br from-[#78c953] via-[#68b544] to-[#519632] p-8 md:p-10 flex flex-col justify-between text-white relative">
+            <div className="w-full md:w-[45%] bg-gradient-to-br from-[#ef4444] via-[#dc2626] to-[#991b1b] p-8 md:p-10 flex flex-col justify-between text-white relative">
               {/* Decorative Background Blob */}
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_55%)] pointer-events-none" />
               
@@ -1179,7 +1515,7 @@ export default function App() {
               {/* Login form field */}
               <form onSubmit={handleLogin} className="space-y-5">
                 <div>
-                  <label className="text-[10px] uppercase font-bold tracking-wider text-[#78c953] block mb-1.5">Username Login</label>
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-[#ef4444] block mb-1.5">Username Login</label>
                   <div className="relative">
                     <UserIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                     <input
@@ -1188,13 +1524,13 @@ export default function App() {
                       placeholder="Masukkan username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="w-full p-2.5 pl-10 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-xs font-semibold text-slate-700 dark:text-slate-200 outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#78c953]/10 focus:border-[#78c953] transition-all"
+                      className="w-full p-2.5 pl-10 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-xs font-semibold text-slate-700 dark:text-slate-200 outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#ef4444]/10 focus:border-[#ef4444] transition-all"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[10px] uppercase font-bold tracking-wider text-[#78c953] block mb-1.5">Password</label>
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-[#ef4444] block mb-1.5">Password</label>
                   <div className="relative">
                     <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                     <input
@@ -1203,7 +1539,7 @@ export default function App() {
                       placeholder="Masukkan password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full p-2.5 pl-10 pr-10 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-xs font-semibold text-slate-700 dark:text-slate-200 outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#78c953]/10 focus:border-[#78c953] transition-all"
+                      className="w-full p-2.5 pl-10 pr-10 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-xs font-semibold text-slate-700 dark:text-slate-200 outline-hidden focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-[#ef4444]/10 focus:border-[#ef4444] transition-all"
                     />
                     <button
                       type="button"
@@ -1223,7 +1559,7 @@ export default function App() {
 
                 <button
                   type="submit"
-                  className="w-full p-3 bg-[#78c953] hover:bg-[#68b544] font-extrabold text-white rounded-2xl text-xs tracking-wider uppercase transition-colors shadow-md shadow-emerald-100 cursor-pointer text-center"
+                  className="w-full p-3 bg-[#ef4444] hover:bg-[#dc2626] font-extrabold text-white rounded-2xl text-xs tracking-wider uppercase transition-colors shadow-md shadow-red-100 cursor-pointer text-center"
                 >
                   Masuk Aplikasi
                 </button>
@@ -1244,7 +1580,7 @@ export default function App() {
                 
                 {/* Brand/Store Info */}
                 <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3 mb-3.5 shrink-0">
-                  <div className="p-1.5 bg-[#78c953] text-white rounded-lg flex items-center justify-center shadow-xs">
+                  <div className="p-1.5 bg-[#ef4444] text-white rounded-lg flex items-center justify-center shadow-xs">
                     <Store size={14} />
                   </div>
                   <div className="min-w-0">
@@ -1262,11 +1598,11 @@ export default function App() {
                       onClick={() => { setActiveTab('dashboard'); setSelectedTxForReceipt(null); }}
                       className={`w-full p-2 px-2.5 text-xs font-bold rounded-lg flex items-center gap-2.5 cursor-pointer transition-all relative ${
                         activeTab === 'dashboard'
-                          ? 'bg-[#78c953]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#78c953] rounded-l-none pl-[7px]'
+                          ? 'bg-[#ef4444]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#ef4444] rounded-l-none pl-[7px]'
                           : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 border-l-[3px] border-transparent pl-[7px]'
                       }`}
                     >
-                      <BarChart3 size={14} className={activeTab === 'dashboard' ? 'text-[#78c953]' : 'text-slate-400 dark:text-slate-500'} />
+                      <BarChart3 size={14} className={activeTab === 'dashboard' ? 'text-[#ef4444]' : 'text-slate-400 dark:text-slate-500'} />
                       <span>Dashboard</span>
                     </button>
                   )}
@@ -1277,12 +1613,72 @@ export default function App() {
                       onClick={() => { setActiveTab('cashier'); setSelectedTxForReceipt(null); }}
                       className={`w-full p-2 px-2.5 text-xs font-bold rounded-lg flex items-center gap-2.5 cursor-pointer transition-all relative ${
                         activeTab === 'cashier'
-                          ? 'bg-[#78c953]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#78c953] rounded-l-none pl-[7px]'
+                          ? 'bg-[#ef4444]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#ef4444] rounded-l-none pl-[7px]'
                           : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 border-l-[3px] border-transparent pl-[7px]'
                       }`}
                     >
-                      <ShoppingBag size={14} className={activeTab === 'cashier' ? 'text-[#78c953]' : 'text-slate-400 dark:text-slate-500'} />
+                      <ShoppingBag size={14} className={activeTab === 'cashier' ? 'text-[#ef4444]' : 'text-slate-400 dark:text-slate-500'} />
                       <span>Kasir (POS)</span>
+                    </button>
+                  )}
+
+                  {/* Master Data Barang (Inventory) - Allowed for: Owner & Admin only - Placed under Cashier */}
+                  {['owner', 'admin'].includes(currentUser.role) && (
+                    <button
+                      onClick={() => { setActiveTab('inventory'); setSelectedTxForReceipt(null); }}
+                      className={`w-full p-2 px-2.5 text-xs font-bold rounded-lg flex items-center gap-2.5 cursor-pointer transition-all relative ${
+                        activeTab === 'inventory'
+                          ? 'bg-[#ef4444]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#ef4444] rounded-l-none pl-[7px]'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 border-l-[3px] border-transparent pl-[7px]'
+                      }`}
+                    >
+                      <Database size={14} className={activeTab === 'inventory' ? 'text-[#ef4444]' : 'text-slate-400 dark:text-slate-500'} />
+                      <span>Master Data Barang</span>
+                    </button>
+                  )}
+
+                  {/* BRILink - Allowed for: Everyone */}
+                  {['owner', 'admin', 'cashier'].includes(currentUser.role) && (
+                    <button
+                      onClick={() => { setActiveTab('brilink'); setSelectedTxForReceipt(null); }}
+                      className={`w-full p-2 px-2.5 text-xs font-bold rounded-lg flex items-center gap-2.5 cursor-pointer transition-all relative ${
+                        activeTab === 'brilink'
+                          ? 'bg-[#ef4444]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#ef4444] rounded-l-none pl-[7px]'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 border-l-[3px] border-transparent pl-[7px]'
+                      }`}
+                    >
+                      <CreditCard size={14} className={activeTab === 'brilink' ? 'text-[#ef4444]' : 'text-slate-400 dark:text-slate-500'} />
+                      <span>Menu BRILink</span>
+                    </button>
+                  )}
+
+                  {/* PPOB - Allowed for: Everyone */}
+                  {['owner', 'admin', 'cashier'].includes(currentUser.role) && (
+                    <button
+                      onClick={() => { setActiveTab('ppob'); setSelectedTxForReceipt(null); }}
+                      className={`w-full p-2 px-2.5 text-xs font-bold rounded-lg flex items-center gap-2.5 cursor-pointer transition-all relative ${
+                        activeTab === 'ppob'
+                          ? 'bg-[#ef4444]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#ef4444] rounded-l-none pl-[7px]'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 border-l-[3px] border-transparent pl-[7px]'
+                      }`}
+                    >
+                      <Layers size={14} className={activeTab === 'ppob' ? 'text-[#ef4444]' : 'text-slate-400 dark:text-slate-500'} />
+                      <span>Menu PPOB</span>
+                    </button>
+                  )}
+
+                  {/* Laporan & Rekap Kas - Allowed for: Everyone */}
+                  {['owner', 'admin', 'cashier'].includes(currentUser.role) && (
+                    <button
+                      onClick={() => { setActiveTab('finance_reports'); setSelectedTxForReceipt(null); }}
+                      className={`w-full p-2 px-2.5 text-xs font-bold rounded-lg flex items-center gap-2.5 cursor-pointer transition-all relative ${
+                        activeTab === 'finance_reports'
+                          ? 'bg-[#ef4444]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#ef4444] rounded-l-none pl-[7px]'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 border-l-[3px] border-transparent pl-[7px]'
+                      }`}
+                    >
+                      <TrendingUp size={14} className={activeTab === 'finance_reports' ? 'text-[#ef4444]' : 'text-slate-400 dark:text-slate-500'} />
+                      <span>Laporan & Rekap Kas</span>
                     </button>
                   )}
 
@@ -1292,27 +1688,27 @@ export default function App() {
                       onClick={() => { setActiveTab('history'); setSelectedTxForReceipt(null); }}
                       className={`w-full p-2 px-2.5 text-xs font-bold rounded-lg flex items-center gap-2.5 cursor-pointer transition-all relative ${
                         activeTab === 'history'
-                          ? 'bg-[#78c953]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#78c953] rounded-l-none pl-[7px]'
+                          ? 'bg-[#ef4444]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#ef4444] rounded-l-none pl-[7px]'
                           : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 border-l-[3px] border-transparent pl-[7px]'
                       }`}
                     >
-                      <History size={14} className={activeTab === 'history' ? 'text-[#78c953]' : 'text-slate-400 dark:text-slate-500'} />
+                      <History size={14} className={activeTab === 'history' ? 'text-[#ef4444]' : 'text-slate-400 dark:text-slate-500'} />
                       <span>Riwayat Transaksi</span>
                     </button>
                   )}
 
-                  {/* 4. Manajemen Stok - Allowed for: Owner & Admin only */}
-                  {['owner', 'admin'].includes(currentUser.role) && (
+                  {/* 3.5. Log Audit & Retur - Allowed for: Everyone */}
+                  {['owner', 'admin', 'cashier'].includes(currentUser.role) && (
                     <button
-                      onClick={() => { setActiveTab('inventory'); setSelectedTxForReceipt(null); }}
+                      onClick={() => { setActiveTab('logs'); setSelectedTxForReceipt(null); }}
                       className={`w-full p-2 px-2.5 text-xs font-bold rounded-lg flex items-center gap-2.5 cursor-pointer transition-all relative ${
-                        activeTab === 'inventory'
-                          ? 'bg-[#78c953]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#78c953] rounded-l-none pl-[7px]'
+                        activeTab === 'logs'
+                          ? 'bg-[#ef4444]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#ef4444] rounded-l-none pl-[7px]'
                           : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 border-l-[3px] border-transparent pl-[7px]'
                       }`}
                     >
-                      <Database size={14} className={activeTab === 'inventory' ? 'text-[#78c953]' : 'text-slate-400 dark:text-slate-500'} />
-                      <span>Manajemen Stok</span>
+                      <ClipboardList size={14} className={activeTab === 'logs' ? 'text-[#ef4444]' : 'text-slate-400 dark:text-slate-500'} />
+                      <span>Log Audit & Retur</span>
                     </button>
                   )}
 
@@ -1322,11 +1718,11 @@ export default function App() {
                       onClick={() => { setActiveTab('pembelian'); setSelectedTxForReceipt(null); }}
                       className={`w-full p-2 px-2.5 text-xs font-bold rounded-lg flex items-center gap-2.5 cursor-pointer transition-all relative ${
                         activeTab === 'pembelian'
-                          ? 'bg-[#78c953]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#78c953] rounded-l-none pl-[7px]'
+                          ? 'bg-[#ef4444]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#ef4444] rounded-l-none pl-[7px]'
                           : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 border-l-[3px] border-transparent pl-[7px]'
                       }`}
                     >
-                      <Truck size={14} className={activeTab === 'pembelian' ? 'text-[#78c953]' : 'text-slate-400 dark:text-slate-500'} />
+                      <Truck size={14} className={activeTab === 'pembelian' ? 'text-[#ef4444]' : 'text-slate-400 dark:text-slate-500'} />
                       <span>Pembelian & Supplier</span>
                     </button>
                   )}
@@ -1337,11 +1733,11 @@ export default function App() {
                       onClick={() => { setActiveTab('customers'); setSelectedTxForReceipt(null); }}
                       className={`w-full p-2 px-2.5 text-xs font-bold rounded-lg flex items-center gap-2.5 cursor-pointer transition-all relative ${
                         activeTab === 'customers'
-                          ? 'bg-[#78c953]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#78c953] rounded-l-none pl-[7px]'
+                          ? 'bg-[#ef4444]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#ef4444] rounded-l-none pl-[7px]'
                           : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 border-l-[3px] border-transparent pl-[7px]'
                       }`}
                     >
-                      <Users size={14} className={activeTab === 'customers' ? 'text-[#78c953]' : 'text-slate-400 dark:text-slate-500'} />
+                      <Users size={14} className={activeTab === 'customers' ? 'text-[#ef4444]' : 'text-slate-400 dark:text-slate-500'} />
                       <span>Data Pelanggan</span>
                     </button>
                   )}
@@ -1352,11 +1748,11 @@ export default function App() {
                       onClick={() => { setActiveTab('settings'); setSelectedTxForReceipt(null); }}
                       className={`w-full p-2 px-2.5 text-xs font-bold rounded-lg flex items-center gap-2.5 cursor-pointer transition-all relative ${
                         activeTab === 'settings'
-                          ? 'bg-[#78c953]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#78c953] rounded-l-none pl-[7px]'
+                          ? 'bg-[#ef4444]/8 text-slate-900 dark:text-slate-100 font-extrabold border-l-[3px] border-[#ef4444] rounded-l-none pl-[7px]'
                           : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 border-l-[3px] border-transparent pl-[7px]'
                       }`}
                     >
-                      <Settings size={14} className={activeTab === 'settings' ? 'text-[#78c953]' : 'text-slate-400 dark:text-slate-500'} />
+                      <Settings size={14} className={activeTab === 'settings' ? 'text-[#ef4444]' : 'text-slate-400 dark:text-slate-500'} />
                       <span>Pengaturan</span>
                     </button>
                   )}
@@ -1365,7 +1761,7 @@ export default function App() {
                 {/* bottom profile block & log out */}
                 <div className="border-t border-slate-100 dark:border-slate-800 pt-3 mt-auto shrink-0 space-y-2 pb-1 bg-white dark:bg-slate-900">
                   <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-850 p-2 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <div className="w-7 h-7 rounded-full bg-[#78c953] text-white font-black text-[9px] uppercase flex items-center justify-center shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-[#ef4444] text-white font-black text-[9px] uppercase flex items-center justify-center shrink-0">
                       {currentUser.role.substring(0, 2)}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -1395,7 +1791,7 @@ export default function App() {
                 <div className="px-5 py-3.5 flex items-center justify-between">
                   
                   <div className="flex items-center gap-3">
-                    <div className="md:hidden p-2 bg-[#78c953]/15 text-[#78c953] rounded-xl flex items-center justify-center">
+                    <div className="md:hidden p-2 bg-[#ef4444]/15 text-[#ef4444] rounded-xl flex items-center justify-center">
                       <Store size={16} />
                     </div>
                     <div>
@@ -1452,7 +1848,7 @@ export default function App() {
                   {['owner'].includes(currentUser.role) && (
                     <button
                       onClick={() => { setActiveTab('dashboard'); setSelectedTxForReceipt(null); }}
-                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'dashboard' ? 'bg-[#78c953] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
+                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'dashboard' ? 'bg-[#ef4444] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
                     >
                       Laporan Keuangan
                     </button>
@@ -1462,9 +1858,49 @@ export default function App() {
                   {['owner', 'admin', 'cashier'].includes(currentUser.role) && (
                     <button
                       onClick={() => { setActiveTab('cashier'); setSelectedTxForReceipt(null); }}
-                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'cashier' ? 'bg-[#78c953] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
+                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'cashier' ? 'bg-[#ef4444] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
                     >
                       Kasir POS
+                    </button>
+                  )}
+
+                  {/* Inventory (Master Data) */}
+                  {['owner', 'admin'].includes(currentUser.role) && (
+                    <button
+                      onClick={() => { setActiveTab('inventory'); setSelectedTxForReceipt(null); }}
+                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'inventory' ? 'bg-[#ef4444] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
+                    >
+                      Inventory
+                    </button>
+                  )}
+
+                  {/* BRILink */}
+                  {['owner', 'admin', 'cashier'].includes(currentUser.role) && (
+                    <button
+                      onClick={() => { setActiveTab('brilink'); setSelectedTxForReceipt(null); }}
+                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'brilink' ? 'bg-[#ef4444] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
+                    >
+                      BRILink
+                    </button>
+                  )}
+
+                  {/* PPOB */}
+                  {['owner', 'admin', 'cashier'].includes(currentUser.role) && (
+                    <button
+                      onClick={() => { setActiveTab('ppob'); setSelectedTxForReceipt(null); }}
+                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'ppob' ? 'bg-[#ef4444] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
+                    >
+                      PPOB
+                    </button>
+                  )}
+
+                  {/* Laporan & Rekap */}
+                  {['owner', 'admin', 'cashier'].includes(currentUser.role) && (
+                    <button
+                      onClick={() => { setActiveTab('finance_reports'); setSelectedTxForReceipt(null); }}
+                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'finance_reports' ? 'bg-[#ef4444] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
+                    >
+                      Laporan & Rekap
                     </button>
                   )}
 
@@ -1472,9 +1908,19 @@ export default function App() {
                   {['owner', 'admin', 'cashier'].includes(currentUser.role) && (
                     <button
                       onClick={() => { setActiveTab('history'); setSelectedTxForReceipt(null); }}
-                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'history' ? 'bg-[#78c953] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
+                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'history' ? 'bg-[#ef4444] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
                     >
                       Riwayat
+                    </button>
+                  )}
+
+                  {/* 3.2. Log & Retur */}
+                  {['owner', 'admin', 'cashier'].includes(currentUser.role) && (
+                    <button
+                      onClick={() => { setActiveTab('logs'); setSelectedTxForReceipt(null); }}
+                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'logs' ? 'bg-[#ef4444] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
+                    >
+                      Log & Retur
                     </button>
                   )}
 
@@ -1482,19 +1928,9 @@ export default function App() {
                   {['owner', 'admin', 'cashier'].includes(currentUser.role) && (
                     <button
                       onClick={() => { setActiveTab('customers'); setSelectedTxForReceipt(null); }}
-                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'customers' ? 'bg-[#78c953] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
+                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'customers' ? 'bg-[#ef4444] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
                     >
                       Pelanggan
-                    </button>
-                  )}
-
-                  {/* 4. Stok Barang */}
-                  {['owner', 'admin'].includes(currentUser.role) && (
-                    <button
-                      onClick={() => { setActiveTab('inventory'); setSelectedTxForReceipt(null); }}
-                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'inventory' ? 'bg-[#78c953] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
-                    >
-                      Stok & Barang
                     </button>
                   )}
 
@@ -1502,7 +1938,7 @@ export default function App() {
                   {['owner', 'admin'].includes(currentUser.role) && (
                     <button
                       onClick={() => { setActiveTab('pembelian'); setSelectedTxForReceipt(null); }}
-                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'pembelian' ? 'bg-[#78c953] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
+                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'pembelian' ? 'bg-[#ef4444] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
                     >
                       Pembelian
                     </button>
@@ -1512,7 +1948,7 @@ export default function App() {
                   {['owner', 'admin'].includes(currentUser.role) && (
                     <button
                       onClick={() => { setActiveTab('settings'); setSelectedTxForReceipt(null); }}
-                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'settings' ? 'bg-[#78c953] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
+                      className={`p-1.5 px-3 text-[10px] font-bold rounded-lg cursor-pointer whitespace-nowrap transition-all ${activeTab === 'settings' ? 'bg-[#ef4444] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50'}`}
                     >
                       Setelan
                     </button>
@@ -1544,10 +1980,12 @@ export default function App() {
                     </h3>
                     <p className="text-xs text-slate-500 mt-1">Konfigurasikan ukuran tanda terima dan cetak struk nota fisik.</p>
                   </div>
-                  <ThermalReceipt
+                   <ThermalReceipt
                     transaction={selectedTxForReceipt}
                     onBack={() => setSelectedTxForReceipt(null)}
                     storeSettings={storeSettings}
+                    customers={customers}
+                    onLogActivity={logActivity}
                   />
                 </div>
               ) : (
@@ -1571,6 +2009,7 @@ export default function App() {
                         storeSettings={storeSettings}
                         isFullscreen={isPosFullscreen}
                         onToggleFullscreen={() => setIsPosFullscreen(!isPosFullscreen)}
+                        onLogActivity={logActivity}
                       />
                     )}
 
@@ -1581,6 +2020,21 @@ export default function App() {
                         onReprint={(tx) => setSelectedTxForReceipt(tx)}
                         onDeleteTransaction={handleDeleteTransaction}
                         currentUserRole={currentUser?.role}
+                        onProcessReturn={handleProcessSalesReturn}
+                        salesReturns={salesReturns}
+                      />
+                    )}
+
+                    {activeTab === 'logs' && (
+                      <LogsAndReturns
+                        activityLogs={activityLogs}
+                        salesReturns={salesReturns}
+                        currentUserRole={currentUser?.role}
+                        onClearLogs={() => {
+                          setActivityLogs([]);
+                          localStorage.setItem('kp_activity_logs', JSON.stringify([]));
+                          triggerNotification('Audit log berhasil dikosongkan!', 'success');
+                        }}
                       />
                     )}
 
@@ -1690,6 +2144,38 @@ export default function App() {
                         currentUser={currentUser}
                       />
                     )}
+
+                    {activeTab === 'brilink' && (
+                      <BrilinkTab
+                        transactions={brilinkTransactions}
+                        onAddTransaction={handleAddBrilinkTransaction}
+                        onDeleteTransaction={handleDeleteBrilinkTransaction}
+                        currentUser={currentUser}
+                      />
+                    )}
+
+                    {activeTab === 'ppob' && (
+                      <PpobTab
+                        transactions={ppobTransactions}
+                        onAddTransaction={handleAddPpobTransaction}
+                        onDeleteTransaction={handleDeletePpobTransaction}
+                        currentUser={currentUser}
+                      />
+                    )}
+
+                    {activeTab === 'finance_reports' && (
+                      <FinanceReportTab
+                        transactions={transactions}
+                        brilinkTransactions={brilinkTransactions}
+                        ppobTransactions={ppobTransactions}
+                        cashSessions={cashSessions}
+                        currentCashSession={currentCashSession}
+                        onOpenSession={handleOpenCashSession}
+                        onCloseSession={handleCloseCashSession}
+                        currentUser={currentUser}
+                        products={products}
+                      />
+                    )}
                   </motion.div>
                 </AnimatePresence>
               )}
@@ -1745,22 +2231,45 @@ export default function App() {
                     Apakah Anda yakin ingin keluar dari sistem kasir <span className="font-bold text-slate-700 dark:text-slate-350">KASIR PINTAR PRO</span>? Sesi aktif Anda saat ini akan segera diistirahatkan.
                   </p>
 
-                  <div className="grid grid-cols-2 gap-3 mt-5">
-                    <button
-                      type="button"
-                      onClick={() => setIsLogoutConfirmOpen(false)}
-                      className="p-2 bg-slate-100 dark:bg-slate-850 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-extrabold rounded-xl text-xs cursor-pointer transition-colors"
-                    >
-                      Batal
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="p-2 bg-red-600 hover:bg-red-700 text-white font-extrabold rounded-xl text-xs cursor-pointer transition-colors shadow-sm shadow-red-100"
-                    >
-                      Keluar Sekarang
-                    </button>
-                  </div>
+                  {isLoggingOut ? (
+                    <div className="mt-5 flex flex-col items-center gap-3 bg-emerald-500/5 dark:bg-emerald-500/10 p-4 border border-emerald-500/20 rounded-2xl">
+                      <div className="w-8 h-8 border-3 border-[#ef4444] border-t-transparent rounded-full animate-spin" />
+                      <div className="text-[11px] font-black text-[#ef4444] animate-pulse">
+                        Mencadangkan data ke Google Sheets...
+                      </div>
+                      <p className="text-[9.5px] font-semibold text-slate-400 dark:text-slate-500 leading-relaxed">
+                        Harap tidak menutup browser atau mematikan internet Anda agar data tetap tersimpan aman di cloud.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {syncConfig.isEnabled && syncConfig.googleSheetsUrl && (
+                        <div className="my-3.5 p-2.5 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-xl text-center">
+                          <p className="text-[10px] text-emerald-800 dark:text-emerald-400 font-semibold flex items-center justify-center gap-1.5">
+                            <Database size={12} className="text-[#ef4444]" />
+                            Auto backup cloud akan dijalankan
+                          </p>
+                        </div>
+                      )}
+                      
+                      <div className="grid grid-cols-2 gap-3 mt-5">
+                        <button
+                          type="button"
+                          onClick={() => setIsLogoutConfirmOpen(false)}
+                          className="p-2 bg-slate-100 dark:bg-slate-850 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-extrabold rounded-xl text-xs cursor-pointer transition-colors"
+                        >
+                          Batal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleLogout}
+                          className="p-2 bg-red-600 hover:bg-red-700 text-white font-extrabold rounded-xl text-xs cursor-pointer transition-colors shadow-sm shadow-red-100"
+                        >
+                          Keluar Sekarang
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </motion.div>
               </div>
             )}

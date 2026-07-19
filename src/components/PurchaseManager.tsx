@@ -418,7 +418,7 @@ export default function PurchaseManager({
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 select-none">
         <div>
           <h2 className="text-xl font-extrabold text-slate-850 dark:text-slate-100 flex items-center gap-2">
-            <Truck className="text-[#78c953]" size={22} /> Pembelian & Supplier
+            <Truck className="text-[#ef4444]" size={22} /> Pembelian & Supplier
           </h2>
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-medium">
             Kelola transaksi pembelian, pengembalian barang (retur) ke supplier, stok, serta penyesuaian saldo hutang toko.
@@ -429,19 +429,19 @@ export default function PurchaseManager({
         <div className="bg-slate-100 dark:bg-slate-900 p-1 rounded-xl flex gap-1 border border-slate-200/50 dark:border-slate-800 shrink-0 self-start md:self-center">
           <button
             onClick={() => setSubTab('purchases')}
-            className={`p-2 px-4 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${subTab === 'purchases' ? 'bg-[#78c953] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+            className={`p-2 px-4 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${subTab === 'purchases' ? 'bg-[#ef4444] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
           >
             <ClipboardList size={13} /> Pembelian
           </button>
           <button
             onClick={() => setSubTab('returns')}
-            className={`p-2 px-4 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${subTab === 'returns' ? 'bg-[#78c953] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+            className={`p-2 px-4 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${subTab === 'returns' ? 'bg-[#ef4444] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
           >
             <RotateCcw size={13} /> Retur Pembelian
           </button>
           <button
             onClick={() => setSubTab('suppliers')}
-            className={`p-2 px-4 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${subTab === 'suppliers' ? 'bg-[#78c953] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+            className={`p-2 px-4 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${subTab === 'suppliers' ? 'bg-[#ef4444] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
           >
             <Truck size={13} /> Supplier
           </button>
@@ -460,7 +460,7 @@ export default function PurchaseManager({
                 placeholder="Cari nota, supplier..."
                 value={searchPurchase}
                 onChange={(e) => setSearchPurchase(e.target.value)}
-                className="w-full pl-9 p-2 bg-slate-50 dark:bg-slate-950/45 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold focus:outline-hidden focus:ring-2 focus:ring-[#78c953]/25 focus:border-[#78c953]"
+                className="w-full pl-9 p-2 bg-slate-50 dark:bg-slate-950/45 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold focus:outline-hidden focus:ring-2 focus:ring-[#ef4444]/25 focus:border-[#ef4444]"
               />
             </div>
 
@@ -473,7 +473,7 @@ export default function PurchaseManager({
                   setPPaymentStatus('paid');
                   setIsPurchaseFormOpen(true);
                 }}
-                className="p-2 px-4 bg-[#78c953] hover:bg-[#67b444] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto"
+                className="p-2 px-4 bg-[#ef4444] hover:bg-[#67b444] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto"
               >
                 <Plus size={14} /> Catat Pembelian Baru
               </button>
@@ -549,7 +549,7 @@ export default function PurchaseManager({
                 placeholder="Cari retur, nota, supplier..."
                 value={searchReturn}
                 onChange={(e) => setSearchReturn(e.target.value)}
-                className="w-full pl-9 p-2 bg-slate-50 dark:bg-slate-950/45 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold focus:outline-hidden focus:ring-2 focus:ring-[#78c953]/25 focus:border-[#78c953]"
+                className="w-full pl-9 p-2 bg-slate-50 dark:bg-slate-950/45 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold focus:outline-hidden focus:ring-2 focus:ring-[#ef4444]/25 focus:border-[#ef4444]"
               />
             </div>
 
@@ -642,7 +642,7 @@ export default function PurchaseManager({
                 placeholder="Cari nama, telepon supplier..."
                 value={searchSupplier}
                 onChange={(e) => setSearchSupplier(e.target.value)}
-                className="w-full pl-9 p-2 bg-slate-50 dark:bg-slate-950/45 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold focus:outline-hidden focus:ring-2 focus:ring-[#78c953]/25 focus:border-[#78c953]"
+                className="w-full pl-9 p-2 bg-slate-50 dark:bg-slate-950/45 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold focus:outline-hidden focus:ring-2 focus:ring-[#ef4444]/25 focus:border-[#ef4444]"
               />
             </div>
 
@@ -650,7 +650,7 @@ export default function PurchaseManager({
             {['owner', 'admin'].includes(currentUser.role) && (
               <button
                 onClick={handleOpenAddSupplier}
-                className="p-2 px-4 bg-[#78c953] hover:bg-[#67b444] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto"
+                className="p-2 px-4 bg-[#ef4444] hover:bg-[#67b444] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto"
               >
                 <Plus size={14} /> Tambah Supplier Baru
               </button>
@@ -733,7 +733,7 @@ export default function PurchaseManager({
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-850 p-6 w-full max-w-lg shadow-2xl animate-fade-in space-y-4">
             <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
               <h4 className="font-extrabold text-slate-850 dark:text-slate-100 text-sm flex items-center gap-2">
-                <FileText size={15} className="text-[#78c953]" /> Rincian Nota Pembelian (PO)
+                <FileText size={15} className="text-[#ef4444]" /> Rincian Nota Pembelian (PO)
               </h4>
               <button 
                 onClick={() => setSelectedPurchaseDetails(null)}
@@ -757,7 +757,7 @@ export default function PurchaseManager({
                 </div>
                 <div>
                   <p className="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Supplier</p>
-                  <p className="font-extrabold text-[#78c953]">{selectedPurchaseDetails.supplierName}</p>
+                  <p className="font-extrabold text-[#ef4444]">{selectedPurchaseDetails.supplierName}</p>
                 </div>
                 <div>
                   <p className="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Status Pembayaran</p>
@@ -891,7 +891,7 @@ export default function PurchaseManager({
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-850 p-6 w-full max-w-sm shadow-2xl animate-fade-in space-y-4">
             <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
               <h4 className="font-extrabold text-slate-850 dark:text-slate-100 text-sm flex items-center gap-2">
-                <Truck size={15} className="text-[#78c953]" /> {editingSupplier ? 'Edit Informasi Supplier' : 'Tambah Supplier Pemasok Baru'}
+                <Truck size={15} className="text-[#ef4444]" /> {editingSupplier ? 'Edit Informasi Supplier' : 'Tambah Supplier Pemasok Baru'}
               </h4>
               <button 
                 onClick={() => setIsSupplierFormOpen(false)}
@@ -910,7 +910,7 @@ export default function PurchaseManager({
                   placeholder="Misal: PT Wings Food, Distributor Kopi..."
                   value={supName}
                   onChange={(e) => setSupName(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-950/45 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-850 dark:text-slate-150 focus:outline-hidden focus:ring-2 focus:ring-[#78c953]/20"
+                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-950/45 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-850 dark:text-slate-150 focus:outline-hidden focus:ring-2 focus:ring-[#ef4444]/20"
                 />
               </div>
 
@@ -922,7 +922,7 @@ export default function PurchaseManager({
                   placeholder="Misal: 0812-xxxx-xxxx atau 021-xxxxx"
                   value={supPhone}
                   onChange={(e) => setSupPhone(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-950/45 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-850 dark:text-slate-150 font-mono focus:outline-hidden focus:ring-2 focus:ring-[#78c953]/20"
+                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-950/45 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-850 dark:text-slate-150 font-mono focus:outline-hidden focus:ring-2 focus:ring-[#ef4444]/20"
                 />
               </div>
 
@@ -933,7 +933,7 @@ export default function PurchaseManager({
                   value={supAddress}
                   onChange={(e) => setSupAddress(e.target.value)}
                   rows={3}
-                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-950/45 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-850 dark:text-slate-150 focus:outline-hidden focus:ring-2 focus:ring-[#78c953]/20"
+                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-950/45 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-850 dark:text-slate-150 focus:outline-hidden focus:ring-2 focus:ring-[#ef4444]/20"
                 />
               </div>
 
@@ -947,7 +947,7 @@ export default function PurchaseManager({
                 </button>
                 <button
                   type="submit"
-                  className="p-2 px-5 bg-[#78c953] hover:bg-[#67b444] text-white rounded-lg text-xs font-bold cursor-pointer"
+                  className="p-2 px-5 bg-[#ef4444] hover:bg-[#67b444] text-white rounded-lg text-xs font-bold cursor-pointer"
                 >
                   {editingSupplier ? 'Simpan Perubahan' : 'Tambah Supplier'}
                 </button>
@@ -1020,7 +1020,7 @@ export default function PurchaseManager({
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-850 p-6 w-full max-w-2xl shadow-2xl animate-fade-in space-y-4">
             <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
               <h4 className="font-extrabold text-slate-850 dark:text-slate-100 text-sm flex items-center gap-2">
-                <ClipboardList size={15} className="text-[#78c953]" /> Catat Nota Pembelian Pemasok (PO)
+                <ClipboardList size={15} className="text-[#ef4444]" /> Catat Nota Pembelian Pemasok (PO)
               </h4>
               <button 
                 onClick={() => setIsPurchaseFormOpen(false)}
@@ -1172,7 +1172,7 @@ export default function PurchaseManager({
                 </button>
                 <button
                   type="submit"
-                  className="p-2 px-5 bg-[#78c953] hover:bg-[#67b444] text-white rounded-lg text-xs font-bold cursor-pointer"
+                  className="p-2 px-5 bg-[#ef4444] hover:bg-[#67b444] text-white rounded-lg text-xs font-bold cursor-pointer"
                 >
                   Konfirmasi PO
                 </button>

@@ -491,7 +491,7 @@ export default function Dashboard({
                 <span className="text-slate-500 dark:text-slate-400 mr-2">Omset</span>
                 <span className="inline-block w-2 h-2 rounded-full bg-amber-500"></span>
                 <span className="text-slate-500 dark:text-slate-400 mr-2">Beban Pokok</span>
-                <span className="inline-block w-2 h-2 rounded-full bg-[#78c953]"></span>
+                <span className="inline-block w-2 h-2 rounded-full bg-[#ef4444]"></span>
                 <span className="text-slate-500 dark:text-slate-400">Laba Bersih</span>
               </div>
             </div>
@@ -511,7 +511,7 @@ export default function Dashboard({
                     />
                     <Bar dataKey="Revenue" fill={isDark ? '#cbd5e1' : '#0f172a'} radius={[3, 3, 0, 0]} barSize={10} />
                     <Bar dataKey="Expenses" fill="#f59e0b" radius={[3, 3, 0, 0]} barSize={10} />
-                    <Bar dataKey="Profit" fill="#78c953" radius={[3, 3, 0, 0]} barSize={10} />
+                    <Bar dataKey="Profit" fill="#ef4444" radius={[3, 3, 0, 0]} barSize={10} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -524,7 +524,7 @@ export default function Dashboard({
 
           <div className="border-t border-slate-50 dark:border-slate-800/60 pt-3 mt-3 flex justify-between items-center text-[9px] text-slate-450 dark:text-slate-400 font-medium">
             <span>Pembaharuan data: Otomatis (Real-time)</span>
-            <span className="flex items-center gap-1 text-[#78c953] font-bold">
+            <span className="flex items-center gap-1 text-[#ef4444] font-bold">
               <CheckCircle2 size={10} /> POS Sinkron
             </span>
           </div>
@@ -540,7 +540,7 @@ export default function Dashboard({
               <div className="text-lg font-extrabold text-slate-800 dark:text-slate-100 mt-1">{formatIDR(metrics.revenue)}</div>
             </div>
             <div className="flex items-center gap-1.5 text-[10px] text-slate-900 dark:text-slate-200 font-bold mt-2">
-              <TrendingUp size={12} className="text-[#78c953]" />
+              <TrendingUp size={12} className="text-[#ef4444]" />
               <span>+5.1% dibanding bulan lalu</span>
             </div>
           </div>
@@ -558,15 +558,15 @@ export default function Dashboard({
           </div>
 
           {/* Card 3: Saved Profit Bersih */}
-          <div className="bg-[#78c953]/15 dark:bg-[#78c953]/10 p-4.5 rounded-2xl border border-[#78c953]/25 dark:border-[#78c953]/20 flex-1 flex flex-col justify-between hover:bg-[#78c953]/20 transition-all duration-200">
+          <div className="bg-[#ef4444]/15 dark:bg-[#ef4444]/10 p-4.5 rounded-2xl border border-[#ef4444]/25 dark:border-[#ef4444]/20 flex-1 flex flex-col justify-between hover:bg-[#ef4444]/20 transition-all duration-200">
             <div>
-              <span className="text-[9px] font-bold text-emerald-800 dark:text-[#78c953] uppercase tracking-widest block">Laba / (Rugi) Bersih (Otomatis)</span>
+              <span className="text-[9px] font-bold text-emerald-800 dark:text-[#ef4444] uppercase tracking-widest block">Laba / (Rugi) Bersih (Otomatis)</span>
               <div className={`text-lg font-extrabold mt-1 ${metrics.profit >= 0 ? 'text-emerald-700 dark:text-emerald-450' : 'text-red-650 dark:text-red-400'}`}>
                 {formatIDR(metrics.profit)}
               </div>
             </div>
-            <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 dark:text-[#78c953] font-medium mt-2">
-              <Sparkles size={11} className="text-[#78c953] animate-pulse" />
+            <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 dark:text-[#ef4444] font-medium mt-2">
+              <Sparkles size={11} className="text-[#ef4444] animate-pulse" />
               <span>Keuntungan bersih dihitung otomatis</span>
             </div>
           </div>
@@ -580,7 +580,7 @@ export default function Dashboard({
             {/* Header info */}
             <div className="flex justify-between items-center mb-4">
               <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#78c953] animate-pulse"></span>
+                <span className="h-1.5 w-1.5 rounded-full bg-[#ef4444] animate-pulse"></span>
                 Kasir Berjaga Aktif
               </span>
               <span className="text-[10px] uppercase font-mono font-bold text-slate-400 dark:text-slate-505">Live POS</span>
@@ -593,8 +593,8 @@ export default function Dashboard({
             <div className="space-y-3.5">
               {cashiersActivity.map((cash, i) => {
                 let roleLabel = "Pemilik Toko";
-                let badgeColor = "bg-[#78c953]/10 text-emerald-800 border-[#78c953]/20 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30";
-                let avatarColor = "bg-[#78c953]/15 text-[#78c953] dark:bg-[#78c953]/20";
+                let badgeColor = "bg-[#ef4444]/10 text-emerald-800 border-[#ef4444]/20 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30";
+                let avatarColor = "bg-[#ef4444]/15 text-[#ef4444] dark:bg-[#ef4444]/20";
                 
                 if (cash.roleKey === 'admin') {
                   roleLabel = "Staf Admin";
@@ -614,7 +614,7 @@ export default function Dashboard({
                           <div className={`w-8 h-8 rounded-full ${avatarColor} flex items-center justify-center text-xs font-black uppercase shadow-sm`}>
                             {cash.initials}
                           </div>
-                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#78c953] border-2 border-white dark:border-slate-900"></span>
+                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#ef4444] border-2 border-white dark:border-slate-900"></span>
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 group/name min-w-0">
@@ -631,7 +631,7 @@ export default function Dashboard({
                                   setEditUserError(null);
                                 }
                               }}
-                              className="p-0.5 text-slate-400 hover:text-[#78c953] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors opacity-0 group-hover/name:opacity-100 focus:opacity-100 cursor-pointer shrink-0"
+                              className="p-0.5 text-slate-400 hover:text-[#ef4444] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors opacity-0 group-hover/name:opacity-100 focus:opacity-100 cursor-pointer shrink-0"
                               title="Kelola Akun & Password"
                             >
                               <Edit2 size={9.5} />
@@ -652,7 +652,7 @@ export default function Dashboard({
                       </div>
                       <div className="text-right">
                         <span className="block text-[8px] text-slate-400 dark:text-slate-500 uppercase tracking-wider font-bold">Total Omset</span>
-                        <span className="text-xs font-extrabold text-[#78c953] mt-0.5 block">{formatIDR(cash.totalSales)}</span>
+                        <span className="text-xs font-extrabold text-[#ef4444] mt-0.5 block">{formatIDR(cash.totalSales)}</span>
                       </div>
                     </div>
                   </div>
@@ -665,7 +665,7 @@ export default function Dashboard({
           <div className="mt-5 border-t border-slate-100 dark:border-slate-800 pt-3 flex items-center justify-between text-[9px] text-slate-450 dark:text-slate-400 font-medium">
             <span>Sesi Berjalan: 24 Jam</span>
             <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#78c953] animate-ping"></span>
+              <span className="h-1.5 w-1.5 rounded-full bg-[#ef4444] animate-ping"></span>
               Jaringan Stabil
             </span>
           </div>
@@ -932,7 +932,7 @@ export default function Dashboard({
             >
               <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-2">
-                  <div className="p-2 bg-[#78c953]/15 text-[#78c953] dark:bg-[#78c953]/20 rounded-xl flex items-center justify-center">
+                  <div className="p-2 bg-[#ef4444]/15 text-[#ef4444] dark:bg-[#ef4444]/20 rounded-xl flex items-center justify-center">
                     <Sparkles size={16} />
                   </div>
                   <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Tips Memaksimalkan Profit Outlet</h3>
@@ -948,7 +948,7 @@ export default function Dashboard({
               <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
                 {/* Tip 1 */}
                 <div className="flex gap-3">
-                  <div className="w-6 h-6 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-[#78c953] flex items-center justify-center font-black text-xs shrink-0 border border-[#78c953]/10">1</div>
+                  <div className="w-6 h-6 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-[#ef4444] flex items-center justify-center font-black text-xs shrink-0 border border-[#ef4444]/10">1</div>
                   <div>
                     <h4 className="font-bold text-xs text-slate-800 dark:text-slate-200">Atur Margin HPP Ideal (30% - 35%)</h4>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
@@ -981,7 +981,7 @@ export default function Dashboard({
 
                 {/* Tip 4 */}
                 <div className="flex gap-3">
-                  <div className="w-6 h-6 rounded-full bg-[#78c953]/10 dark:bg-[#78c953]/20 text-emerald-800 dark:text-emerald-450 flex items-center justify-center font-black text-xs shrink-0 border border-emerald-100 dark:border-[#78c953]/25">4</div>
+                  <div className="w-6 h-6 rounded-full bg-[#ef4444]/10 dark:bg-[#ef4444]/20 text-emerald-800 dark:text-emerald-450 flex items-center justify-center font-black text-xs shrink-0 border border-emerald-100 dark:border-[#ef4444]/25">4</div>
                   <div>
                     <h4 className="font-bold text-xs text-slate-800 dark:text-slate-200">Integrasikan Cloud Autosave Google Sheets</h4>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
@@ -1006,7 +1006,7 @@ export default function Dashboard({
                 <button
                   type="button"
                   onClick={() => setIsTipsOpen(false)}
-                  className="px-4 py-2 bg-[#78c953] text-white hover:bg-[#68b544] rounded-xl text-xs font-bold cursor-pointer transition-all shadow-xs"
+                  className="px-4 py-2 bg-[#ef4444] text-white hover:bg-[#dc2626] rounded-xl text-xs font-bold cursor-pointer transition-all shadow-xs"
                 >
                   Saya Paham
                 </button>
@@ -1029,7 +1029,7 @@ export default function Dashboard({
             >
               <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-2">
-                  <div className="p-2 bg-[#78c953]/15 text-[#78c953] dark:bg-[#78c953]/20 rounded-xl flex items-center justify-center">
+                  <div className="p-2 bg-[#ef4444]/15 text-[#ef4444] dark:bg-[#ef4444]/20 rounded-xl flex items-center justify-center">
                     <UserIcon size={16} />
                   </div>
                   <div className="text-left">
@@ -1056,7 +1056,7 @@ export default function Dashboard({
                     value={editFormName}
                     onChange={(e) => setEditFormName(e.target.value)}
                     placeholder="Nama personel..."
-                    className="w-full p-2.5 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 focus:outline-hidden focus:ring-1 focus:ring-[#78c953]"
+                    className="w-full p-2.5 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 focus:outline-hidden focus:ring-1 focus:ring-[#ef4444]"
                   />
                 </div>
 
@@ -1068,7 +1068,7 @@ export default function Dashboard({
                     value={editFormUsername}
                     onChange={(e) => setEditFormUsername(e.target.value)}
                     placeholder="Username baru..."
-                    className="w-full p-2.5 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 focus:outline-hidden focus:ring-1 focus:ring-[#78c953]"
+                    className="w-full p-2.5 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 focus:outline-hidden focus:ring-1 focus:ring-[#ef4444]"
                   />
                   <p className="text-[8.5px] text-slate-400 dark:text-slate-550 mt-1 font-medium leading-normal">Digunakan untuk login di sistem kasir, tanpa spasi & huruf kecil.</p>
                 </div>
@@ -1082,7 +1082,7 @@ export default function Dashboard({
                       value={editFormPassword}
                       onChange={(e) => setEditFormPassword(e.target.value)}
                       placeholder="Password baru..."
-                      className="w-full p-2.5 pr-9 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 focus:outline-hidden focus:ring-1 focus:ring-[#78c953]"
+                      className="w-full p-2.5 pr-9 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 focus:outline-hidden focus:ring-1 focus:ring-[#ef4444]"
                     />
                     <button
                       type="button"
@@ -1113,7 +1113,7 @@ export default function Dashboard({
                 <button
                   type="button"
                   onClick={handleSaveUserCredentials}
-                  className="p-2 bg-[#78c953] hover:bg-[#68b544] text-white font-extrabold rounded-xl text-xs cursor-pointer transition-colors shadow-xs"
+                  className="p-2 bg-[#ef4444] hover:bg-[#dc2626] text-white font-extrabold rounded-xl text-xs cursor-pointer transition-colors shadow-xs"
                 >
                   Simpan Akun
                 </button>

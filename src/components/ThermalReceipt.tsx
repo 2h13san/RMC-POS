@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { Printer, Wifi, Bluetooth, ArrowLeft, RefreshCw, CheckCircle, Smartphone, HelpCircle } from 'lucide-react';
-import { Transaction, StoreSettings } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Printer, Wifi, Bluetooth, ArrowLeft, RefreshCw, CheckCircle, Smartphone, HelpCircle, MessageSquare } from 'lucide-react';
+import { Transaction, StoreSettings, Customer } from '../types';
 
 interface ThermalReceiptProps {
   transaction: Transaction;
@@ -14,6 +14,8 @@ interface ThermalReceiptProps {
   storeName?: string;
   storeAddress?: string;
   storePhone?: string;
+  customers?: Customer[];
+  onLogActivity?: (action: string, details: string) => void;
 }
 
 export default function ThermalReceipt({
@@ -22,7 +24,9 @@ export default function ThermalReceipt({
   storeSettings,
   storeName,
   storeAddress,
-  storePhone
+  storePhone,
+  customers = [],
+  onLogActivity
 }: ThermalReceiptProps) {
   // Leverage storeSettings with defaults fallbacks
   const nameOfStore = storeSettings?.name || storeName || "KASIR PINTAR COFFEE & EATERY";
@@ -32,6 +36,55 @@ export default function ThermalReceipt({
   const [bluetoothDevice, setBluetoothDevice] = useState<any>(null);
   const [printSuccess, setPrintSuccess] = useState(false);
   const [paperWidth, setPaperWidth] = useState<'58' | '80'>('58');
+  const [waPhone, setWaPhone] = useState('');
+
+  useEffect(() => {
+    if (transaction.customerId && customers.length > 0) {
+      const foundCustomer = customers.find(c => c.id === transaction.customerId);
+      if (foundCustomer && foundCustomer.phone) {
+        setWaPhone(foundCustomer.phone);
+      }
+    } else {
+      setWaPhone('');
+    }
+  }, [transaction.customerId, customers]);
+
+  const getWhatsAppShareUrl = () => {
+    let cleanPhone = waPhone.replace(/[^0-9]/g, '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '62' + cleanPhone.substring(1);
+    } else if (!cleanPhone.startsWith('62') && cleanPhone.startsWith('8')) {
+      cleanPhone = '62' + cleanPhone;
+    }
+
+    // Format receipt details in plain text for WhatsApp
+    const itemLines = transaction.items.map(item => {
+      let line = `• *${item.name}*\n  ${item.qty} x Rp ${item.price.toLocaleString('id-ID')}`;
+      if (item.discount > 0) {
+        line += `\n  _Diskon: -Rp ${(item.discount * item.qty).toLocaleString('id-ID')}_`;
+      }
+      line += ` = *Rp ${item.total.toLocaleString('id-ID')}*`;
+      return line;
+    }).join('\n');
+
+    const storeHeader = `*${nameOfStore.toUpperCase()}*\n${addressOfStore}\nTelp: ${phoneOfStore}\n------------------------------------------`;
+    const receiptInfo = `*STRUK BELANJA DIGITAL*\nInvoice: *${transaction.invoiceNumber}*\nTanggal: ${new Date(transaction.date).toLocaleString('id-ID')}\nKasir: ${transaction.cashierName}\nBayar: ${transaction.paymentMethod.toUpperCase()}${transaction.customerName ? `\nPelanggan: ${transaction.customerName}` : ''}\n------------------------------------------`;
+
+    const cogsInfo = `*Subtotal:* Rp ${transaction.subTotal.toLocaleString('id-ID')}` +
+      (transaction.discountTotal > 0 ? `\n*Total Potongan:* -Rp ${transaction.discountTotal.toLocaleString('id-ID')}` : '') +
+      (transaction.taxTotal > 0 ? `\n*Pajak (PPN):* Rp ${transaction.taxTotal.toLocaleString('id-ID')}` : '') +
+      `\n*TOTAL BELANJA:* *Rp ${transaction.total.toLocaleString('id-ID')}*`;
+
+    const cashInfo = transaction.paymentMethod === 'cash'
+      ? `\n\n*Bayar Tunai:* Rp ${(transaction.cashAmount || 0).toLocaleString('id-ID')}\n*Kembalian:* Rp ${(transaction.changeAmount || 0).toLocaleString('id-ID')}`
+      : `\n\n_Lunas via ${transaction.paymentMethod.toUpperCase()} (Online)_`;
+
+    const footer = `\n------------------------------------------\nTerima kasih atas kunjungan Anda!\nSemoga hari Anda menyenangkan. 😊\n_Powered by Kasir Pintar Pro_`;
+
+    const fullText = `${storeHeader}\n${receiptInfo}\n${itemLines}\n\n------------------------------------------\n${cogsInfo}${cashInfo}${footer}`;
+
+    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(fullText)}`;
+  };
 
   // Format IDR helper
   const formatIDR = (num: number) => {
@@ -332,6 +385,43 @@ export default function ThermalReceipt({
               Cetak / Simpan PDF
             </button>
           </div>
+
+          {/* WhatsApp sharing option */}
+          <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/15 rounded-xl border border-emerald-150/50 dark:border-emerald-900/40 transition-colors flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-150 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 rounded-lg">
+                <MessageSquare size={18} />
+              </div>
+              <div className="flex-1">
+                <span className="font-semibold text-slate-700 dark:text-slate-300 text-xs block">WhatsApp Struk Digital</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Kirim nota belanja lewat WhatsApp</span>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[9px] uppercase font-bold text-slate-450 dark:text-slate-500 block">No. WhatsApp Pelanggan</label>
+              <input
+                type="tel"
+                placeholder="Contoh: 08123456789"
+                value={waPhone}
+                onChange={(e) => setWaPhone(e.target.value)}
+                className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold outline-hidden text-slate-750 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500/15 focus:border-emerald-500 transition-all font-mono"
+              />
+            </div>
+
+            <a
+              href={getWhatsAppShareUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => {
+                onLogActivity?.('Kirim Struk WA', `Mengirim struk belanja ${transaction.invoiceNumber} ke nomor WhatsApp ${waPhone}`);
+              }}
+              className={`w-full p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs text-center cursor-pointer ${!waPhone.trim() ? 'pointer-events-none opacity-50' : ''}`}
+            >
+              <MessageSquare size={14} />
+              Kirim Nota via WhatsApp
+            </a>
+          </div>
         </div>
 
         {/* Dynamic Help Guide for Thermal Printer Pairing */}
@@ -342,7 +432,7 @@ export default function ThermalReceipt({
           </div>
           <div className="text-[10px] space-y-2 text-slate-600 dark:text-slate-300 leading-relaxed font-semibold">
             <div>
-              <p className="font-extrabold text-[#78c953] flex items-center gap-1">① Melalui Bluetooth (Portable):</p>
+              <p className="font-extrabold text-[#ef4444] flex items-center gap-1">① Melalui Bluetooth (Portable):</p>
               <ul className="list-disc list-inside pl-1 mt-1 space-y-0.5">
                 <li>Aktifkan bluetooth di device Android / Laptop Anda.</li>
                 <li>Nyalakan daya printer thermal bluetooth.</li>
@@ -351,7 +441,7 @@ export default function ThermalReceipt({
               </ul>
             </div>
             <div className="border-t border-emerald-100/60 dark:border-emerald-900/30 pt-2">
-              <p className="font-extrabold text-[#78c953] flex items-center gap-1">② Melalui USB / Kertas Kasir Desktop:</p>
+              <p className="font-extrabold text-[#ef4444] flex items-center gap-1">② Melalui USB / Kertas Kasir Desktop:</p>
               <ul className="list-disc list-inside pl-1 mt-1 space-y-0.5">
                 <li>Sambungkan kabel printer thermal ke laptop Anda.</li>
                 <li>Setel setelan printer komputer Anda ke mode <strong className="text-slate-800 dark:text-slate-200">Generic / Text Only</strong>.</li>
